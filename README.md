@@ -9,7 +9,7 @@ The Pulseq repository is included here as a Git submodule (lib/pulseq).
 
 ## Get the source code
 
-To ensure that the submodule(s) are loaded, add the `--recurse-submodules` option to the git clone command:
+To ensure that the submodule(s) are loaded, add the `--recursive` option to the git clone command:
 
 <!--- 
 $ git clone --recurse-submodules git@github.com:toppeMRI/PulseGEq.git>

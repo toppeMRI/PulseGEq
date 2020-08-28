@@ -50,4 +50,4 @@ To display sequence:
 
 ```
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/qswI1vPQ4io" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+Screen capture of this example: https://www.youtube.com/embed/qswI1vPQ4io

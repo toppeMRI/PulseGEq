@@ -5,7 +5,7 @@ Pulseq (http://pulseq.github.io/) is an open, vendor-agnostic file format specif
 The code in this repository converts a Pulseq (.seq) file to a set of files that can be executed on GE scanners.
 
 The Pulseq and TOPPE repositories are included here as Git submodules (./lib/),
-to enure that the correct Pulseq/TOPPE versions (commits) are used.
+to ensure that the correct Pulseq/TOPPE versions (commits) are used.
 
 
 ## Get the source code

@@ -15,6 +15,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %   system             struct containing GE and TOPPE system specs. See +toppe/systemspecs.m.
 %   verbose            true or false (default)
 %   debug              display detailed info about progress (default: false)
+%   pulseqVer          'v1.3.0' (default) or 'v1.2.1'
 %
 % Output:
 %   TOPPE .tar file containing scanloop.txt, modules.txt, and .mod files
@@ -40,6 +41,7 @@ arg.tarfile = 'out.tar';
 arg.system  = toppe.systemspecs();
 arg.verbose = false;
 arg.debug = false;
+arg.pulseqVer = 'v1.3.0';
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -57,6 +59,15 @@ switch arg.system.toppe.version
 		nCols = 25;   % number of columns in scanloop.txt
 	otherwise
 		error('Please use TOPPE v2 or v3');
+end
+
+switch arg.pulseqVer
+	case 'v1.2.1'
+		nEvents = 6;   % number of events per block (number of columns
+	case 'v1.3.0'
+		nEvents = 7;
+	otherwise
+		error(sprintf('Pulseq version %s is not supported', arg.pulseqVer));
 end
 
 %% Get seq object
@@ -87,7 +98,7 @@ end
 
 % get contents of [BLOCKS] section
 blockEvents = cell2mat(seq.blockEvents);
-blockEvents = reshape(blockEvents, [7, length(seq.blockEvents)]).'; % hardcoded for as long as Pulseq does not include another element
+blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; % hardcoded for as long as Pulseq does not include another element
 
 % First entry in 'moduleArr' struct array
 ib = 1;

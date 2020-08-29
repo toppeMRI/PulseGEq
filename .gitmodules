@@ -4,3 +4,6 @@
 [submodule "lib/toppe"]
 	path = lib/toppe
 	url = https://github.com/toppeMRI/toppe/
+[submodule "lib/pulseq-v1.2.1"]
+	path = lib/pulseq-v1.2.1
+	url = https://github.com/pulseq/pulseq

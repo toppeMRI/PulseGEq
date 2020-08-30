@@ -17,10 +17,11 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %   system            struct        Contains GE and TOPPE system specs. See +toppe/systemspecs.m
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
-%   pulseqVer         string        'v1.3.0' (default) or 'v1.2.1'
+%   pulseqVersion     string        'v1.3.0' (default) or 'v1.2.1'
 %
 % Usage examples:
-%   >> seq2ge('myseqfile.seq');
+%   >> seq2ge('../examples/2DFLASH.seq');
+%   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
 %
 %   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
 %   >> seq2ge('2DFLASH.seq', 'system', system, 'verbose', true);
@@ -35,7 +36,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 arg.system  = toppe.systemspecs();
 arg.verbose = false;
 arg.debug = false;
-arg.pulseqVer = 'v1.3.0';
+arg.pulseqVersion = 'v1.3.0';
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -55,13 +56,13 @@ switch arg.system.toppe.version
 		error('Please use TOPPE v2 or v3');
 end
 
-switch arg.pulseqVer
+switch arg.pulseqVersion
 	case 'v1.2.1'
 		nEvents = 6;   % number of events per block (number of columns in .seq file)
 	case 'v1.3.0'
 		nEvents = 7;
 	otherwise
-		error(sprintf('Pulseq version %s is not supported', arg.pulseqVer));
+		error(sprintf('Pulseq version %s is not supported', arg.pulseqVersion));
 end
 
 %% Get seq object

@@ -1,6 +1,6 @@
 [submodule "pulseq"]
-	path = lib/pulseq
+	path = deps/pulseq
 	url = https://github.com/pulseq/pulseq
 [submodule "lib/toppe"]
-	path = lib/toppe
+	path = deps/toppe
 	url = https://github.com/toppeMRI/toppe/

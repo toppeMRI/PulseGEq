@@ -31,6 +31,8 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %   >> seq2ge(seq, 'system', system);
 %
 
+%import pulsegeq.*
+
 %% parse inputs
 % Defaults
 arg.system  = toppe.systemspecs();
@@ -101,11 +103,11 @@ block = seq.getBlock(ib);
 if ~isempty(block.delay)
 	error('First block can''t contain a delay. Edit the .seq file.');
 end
-moduleArr(ib) = sub_block2module(block, ib, arg.system, 1);
+moduleArr(ib) = pulsegeq.sub_block2module(block, ib, arg.system, 1);
 
 % First entry in 'loopStructArr' struct array (first block is by definition a module)
 nextblock = seq.getBlock(ib+1);   % needed to set 'textra' in scanloop.txt
-loopStructArr(ib) = sub_updateloopstruct([], block, nextblock, arg.system, 'mod', ib);
+loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, 'mod', ib);
 
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
 sl = 1;
@@ -151,7 +153,7 @@ for ib = 2:length(seq.blockEvents)
 	end
 
 	% create a TOPPE module struct from current Pulseq block
-	modCandidate = sub_block2module(block, ib, arg.system, length(moduleArr) + 1);
+	modCandidate = pulsegeq.sub_block2module(block, ib, arg.system, length(moduleArr) + 1);
 
 	% Is there an existing module that can be 'reused'?
 	% Specifically, does one of the existing modules (elements of moduleArr) have the same length waveform, 
@@ -177,7 +179,7 @@ for ib = 2:length(seq.blockEvents)
 			fprintf('\tFound new module at block %d\n', ib);
 		end
 		moduleArr(end+1) = modCandidate;
-		loopStructArr(ib) = sub_updateloopstruct([], block, nextblock, arg.system, ...
+		loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...
 			'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(moduleArr));
 		continue; % done, so move on to next block
 	end
@@ -212,12 +214,12 @@ for ib = 2:length(seq.blockEvents)
 		% We found a set of RF/gradient waveforms in modularArr(ic) with the same shapes as those in modCandidate,
 		% so we'll 'reuse' that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
 		iWavReuse = I(1);
-		loopStructArr(ib) = sub_updateloopstruct([], block, nextblock, arg.system, ...
+		loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...
 			'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', iWavReuse);
 	else
 		% Found a new set of shapes, so add this waveform set to moduleArr(ic)
-		moduleArr(ic) = sub_updatemodule(moduleArr(ic), block, ib, arg.system);
-		loopStructArr(ib) = sub_updateloopstruct([], block, nextblock, arg.system, ...  %'mod', ic);
+		moduleArr(ic) = pulsegeq.sub_updatemodule(moduleArr(ic), block, ib, arg.system);
+		loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...  %'mod', ic);
 			'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', moduleArr(ic).npulses);
 	end
 
@@ -235,17 +237,17 @@ end
 if false
 	% still frame
 	nstart = 1; nstop = 20;
-	[rf,gx,gy,gz] = sub_plotseq(moduleArr,loopStructArr,nstart,nstop);
+	[rf,gx,gy,gz] = pulsegeq.sub_plotseq(moduleArr,loopStructArr,nstart,nstop);
 
 	% movie
 	nBlocksPerTR = 5;
-	sub_playseq(moduleArr, loopStructArr, nBlocksPerTR, nTRskip, tpause);
-   sub_playseq(modArr, loopArr, nBlocksPerTR);
-   sub_playseq(modArr, loopArr, 5, 'gradMode', 'slew', 'tpause', 0.5);
+	pulsegeq.sub_playseq(moduleArr, loopStructArr, nBlocksPerTR, nTRskip, tpause);
+   pulsegeq.sub_playseq(modArr, loopArr, nBlocksPerTR);
+   pulsegeq.sub_playseq(modArr, loopArr, 5, 'gradMode', 'slew', 'tpause', 0.5);
 end
 
 
-%% Hopefully the sequence looks correct (sub_playseq()), so now we need to write the
+%% Hopefully the sequence looks correct (pulsegeq.sub_playseq()), so now we need to write the
 %% TOPPE files.
 
 

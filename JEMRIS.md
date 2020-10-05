@@ -23,6 +23,8 @@ Download the JEMRIS source package from Github. Change into the pulseq-export br
 Get source code
 ```
 $ git clone git@github.com:JEMRIS/jemris.git
+$ cd jemris
+$ git checkout pulseq-export
 ```
 
 Compile and install

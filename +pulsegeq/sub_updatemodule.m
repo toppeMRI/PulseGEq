@@ -8,6 +8,8 @@ function module = sub_updatemodule(module, block, blockid, system)
 %   blockid          Pulseq block is seq.getBlock(blockid)
 %   system           system struct (see above)
 
+import pulsegeq.*
+
 dt  = system.raster;   % sec
 
 if isempty(module.blockids)

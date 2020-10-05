@@ -1,45 +1,44 @@
 function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 % function seq2ge(seqarg, varargin)
 %
-% Pulseq to TOPPE file conversion.
+% Convert a Pulseq file (http://pulseq.github.io/) to a set of TOPPE files
+% that can be executed on GE MR scanners. 
 %
-% This script creates a .tar file containing the following:
+% See https://toppemri.github.io/ for more info on TOPPE.
+%
+% This script writes the following files to disk:
 %   *.mod:            One .mod file corresponds to one "unique" block (see below)
-%   modules.txt       List of .modfiles, and flags indicating whether the .wav file is RF/ADC/(gradients only)
+%   modules.txt       List of .mod files, and flags indicating whether each .mod file corresponds to an RF/ADC/(gradients only) module
 %   scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
 %
 % Inputs:
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
 % Input options:
-%   tarfile            Output file name. Default: 'out.tar'
-%   system             struct containing GE and TOPPE system specs. See +toppe/systemspecs.m.
-%   verbose            true or false (default)
-%   debug              display detailed info about progress (default: false)
-%
-% Output:
-%   TOPPE .tar file containing scanloop.txt, modules.txt, and .mod files
-%   In addition, the TOPPE sequence can be constructed from moduleArr and loopStructArr:
-%      >> [rf,gx,gy,gz] = sub_plotseq(moduleArr, loopStructArr, istart, istop);
+%   system            struct        Contains GE and TOPPE system specs. See +toppe/systemspecs.m
+%   verbose           boolean       Default: false
+%   debug             boolean       Display detailed info about progress (default: false)
+%   pulseqVersion     string        'v1.3.0' (default) or 'v1.2.1'
 %
 % Usage examples:
-%   >> seq2ge('myseqfile.seq');
+%   >> seq2ge('../examples/2DFLASH.seq');
+%   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
 %
-%   >> lims = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
-%   >> lims = toppe.systemspecs('maxSlew',15,'maxGrad',5');
-%   >> seq2ge('myseqfile.seq', 'system', lims);
+%   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
+%   >> seq2ge('2DFLASH.seq', 'system', system, 'verbose', true);
 %
 %   >> seq = mr.Sequence();
-%   >> seq.read('myseqfile.seq');
-%   >> seq2ge(seq, 'system', lims);
+%   >> seq.read('2DFLASH.seq');
+%   >> seq2ge(seq, 'system', system);
 %
-% See https://toppemri.github.io/ for more info on TOPPE.
+
+%import pulsegeq.*
 
 %% parse inputs
 % Defaults
-arg.tarfile = 'out.tar';
 arg.system  = toppe.systemspecs();
 arg.verbose = false;
 arg.debug = false;
+arg.pulseqVersion = 'v1.3.0';
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -59,13 +58,22 @@ switch arg.system.toppe.version
 		error('Please use TOPPE v2 or v3');
 end
 
+switch arg.pulseqVersion
+	case 'v1.2.1'
+		nEvents = 6;   % number of events per block (number of columns in .seq file)
+	case 'v1.3.0'
+		nEvents = 7;
+	otherwise
+		error(sprintf('Pulseq version %s is not supported', arg.pulseqVersion));
+end
+
 %% Get seq object
 if isa(seqarg, 'char')
 	seq = mr.Sequence();
 	seq.read(seqarg);
 else
 	if ~isa(seqarg, 'mr.Sequence')
-		error('Input not an mr.Sequence object');
+		error('First argument is not an mr.Sequence object');
 	end
 	seq = seqarg;
 end
@@ -87,7 +95,7 @@ end
 
 % get contents of [BLOCKS] section
 blockEvents = cell2mat(seq.blockEvents);
-blockEvents = reshape(blockEvents, [7, length(seq.blockEvents)]).'; % hardcoded for as long as Pulseq does not include another element
+blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; % hardcoded for as long as Pulseq does not include another element
 
 % First entry in 'moduleArr' struct array
 ib = 1;
@@ -95,11 +103,11 @@ block = seq.getBlock(ib);
 if ~isempty(block.delay)
 	error('First block can''t contain a delay. Edit the .seq file.');
 end
-moduleArr(ib) = sub_block2module(block, ib, arg.system, 1);
+moduleArr(ib) = pulsegeq.sub_block2module(block, ib, arg.system, 1);
 
 % First entry in 'loopStructArr' struct array (first block is by definition a module)
 nextblock = seq.getBlock(ib+1);   % needed to set 'textra' in scanloop.txt
-loopStructArr(ib) = sub_updateloopstruct([], block, nextblock, arg.system, 'mod', ib);
+loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, 'mod', ib);
 
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
 sl = 1;
@@ -145,7 +153,7 @@ for ib = 2:length(seq.blockEvents)
 	end
 
 	% create a TOPPE module struct from current Pulseq block
-	modCandidate = sub_block2module(block, ib, arg.system, length(moduleArr) + 1);
+	modCandidate = pulsegeq.sub_block2module(block, ib, arg.system, length(moduleArr) + 1);
 
 	% Is there an existing module that can be 'reused'?
 	% Specifically, does one of the existing modules (elements of moduleArr) have the same length waveform, 
@@ -171,7 +179,7 @@ for ib = 2:length(seq.blockEvents)
 			fprintf('\tFound new module at block %d\n', ib);
 		end
 		moduleArr(end+1) = modCandidate;
-		loopStructArr(ib) = sub_updateloopstruct([], block, nextblock, arg.system, ...
+		loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...
 			'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(moduleArr));
 		continue; % done, so move on to next block
 	end
@@ -206,12 +214,12 @@ for ib = 2:length(seq.blockEvents)
 		% We found a set of RF/gradient waveforms in modularArr(ic) with the same shapes as those in modCandidate,
 		% so we'll 'reuse' that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
 		iWavReuse = I(1);
-		loopStructArr(ib) = sub_updateloopstruct([], block, nextblock, arg.system, ...
+		loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...
 			'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', iWavReuse);
 	else
 		% Found a new set of shapes, so add this waveform set to moduleArr(ic)
-		moduleArr(ic) = sub_updatemodule(moduleArr(ic), block, ib, arg.system);
-		loopStructArr(ib) = sub_updateloopstruct([], block, nextblock, arg.system, ...  %'mod', ic);
+		moduleArr(ic) = pulsegeq.sub_updatemodule(moduleArr(ic), block, ib, arg.system);
+		loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...  %'mod', ic);
 			'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', moduleArr(ic).npulses);
 	end
 
@@ -229,17 +237,17 @@ end
 if false
 	% still frame
 	nstart = 1; nstop = 20;
-	[rf,gx,gy,gz] = sub_plotseq(moduleArr,loopStructArr,nstart,nstop);
+	[rf,gx,gy,gz] = pulsegeq.sub_plotseq(moduleArr,loopStructArr,nstart,nstop);
 
 	% movie
 	nBlocksPerTR = 5;
-	sub_playseq(moduleArr, loopStructArr, nBlocksPerTR, nTRskip, tpause);
-   sub_playseq(modArr, loopArr, nBlocksPerTR);
-   sub_playseq(modArr, loopArr, 5, 'gradMode', 'slew', 'tpause', 0.5);
+	pulsegeq.sub_playseq(moduleArr, loopStructArr, nBlocksPerTR, nTRskip, tpause);
+   pulsegeq.sub_playseq(modArr, loopArr, nBlocksPerTR);
+   pulsegeq.sub_playseq(modArr, loopArr, 5, 'gradMode', 'slew', 'tpause', 0.5);
 end
 
 
-%% Hopefully the sequence looks correct (sub_playseq()), so now we need to write the
+%% Hopefully the sequence looks correct (pulsegeq.sub_playseq()), so now we need to write the
 %% TOPPE files.
 
 

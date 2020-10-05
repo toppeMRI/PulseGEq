@@ -219,28 +219,6 @@ seq.write(arg.seqfile);
 
 return;
 
-	
-%% convert gradient from Gauss/cm to Hz/m, and interpolate to seq.gradRasterTime
-function gout = g2pulseq(g,geRasterTime,seq)
-gamma = 4.2576e3;      % Hz/G
-g = g * gamma * 100;   % Hz/m
-T = numel(g)*geRasterTime;    % pulse duration
-tge = 0:geRasterTime:(T-geRasterTime);
-t = 0:seq.gradRasterTime:(T-seq.gradRasterTime);
-gout = interp1(tge, g, t, 'linear', 'extrap');
-return;
-
-%% convert rf units from Gauss to Hz, and interpolate to seq.rfRasterTime
-function rfout = rf2pulseq(rf,geRasterTime,seq)
-gamma = 4.2576e3;       % Hz/G
-rf = rf*gamma;          % Hz
-T = numel(rf)*geRasterTime;   % pulse duration
-tge = 0:geRasterTime:(T-geRasterTime);
-t = 0:seq.rfRasterTime:(T-seq.rfRasterTime);
-rfout = interp1(tge, rf, t, 'linear', 'extrap');
-%L = 10; cutoff = 0.9;
-%rf = interp(rf,dt/rfRasterTime,L,cutoff);      % upsample from 4us to 1us
-return;
 
 %% get gradient arguments (as string) to pass to seq.addBlock()
 function argStr = getArgStr(hasg)

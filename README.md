@@ -6,7 +6,7 @@ Pulseq files can be created in a number of ways, e.g., using the Pulseq Matlab p
 
 The code in this repository converts a Pulseq (.seq) file to a set of files that can be executed on GE scanners.
 
-The Pulseq and TOPPE repositories are included here as Git submodules (./lib/),
+The Pulseq and TOPPE repositories are included here as Git submodules (./deps/),
 to enure that the correct Pulseq/TOPPE versions (commits) are used.
 
 
@@ -26,9 +26,8 @@ $ git clone --recurse-submodules git@github.com:toppeMRI/PulseGEq.git>
 ## Set Matlab paths
 
 ```
-  >> addpath ~/github/toppeMRI/PulseGEq/src/                  % seg2ge.m
-  >> addpath ~/github/toppeMRI/PulseGEq/lib/pulseq/matlab/    % +mr package
-  >> addpath ~/github/toppeMRI/PulseGEq/lib/toppe/            % +toppe package
+  >> addpath ~/github/toppeMRI/PulseGEq/deps/pulseq/matlab/    % +mr package
+  >> addpath ~/github/toppeMRI/PulseGEq/deps/toppe/            % +toppe package
 ```
 
 
@@ -36,14 +35,14 @@ $ git clone --recurse-submodules git@github.com:toppeMRI/PulseGEq.git>
 
 ```
   >> cd ./examples/
-  >> seq2ge('2DFLASH.seq', 'verbose', true);
+  >> pulsegeq.seq2ge('2DFLASH.seq', 'verbose', true);
 ```
 or
 ```
   >> seq = mr.Sequence();
   >> seq.read('2DFLASH.seq');
   >> seq.plot('timeRange', [0 0.04]);
-  >> seq2ge(seq, 'verbose', true);
+  >> pulsegeq.seq2ge(seq, 'verbose', true);
 ```
 
 To display sequence:

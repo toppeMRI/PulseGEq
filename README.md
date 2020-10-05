@@ -53,3 +53,29 @@ To display sequence:
 ```
 
 Screen capture of this example: https://www.youtube.com/embed/qswI1vPQ4io
+
+
+## Support for older Pulseq versions
+
+
+### Pulseq v1.2.1
+
+As of Oct 5, 2020, JEMRIS outputs Pulseq v1.2.1.
+To use that version of Pulseq, do:
+
+
+#### Set your clone of the Pulseq repo to v1.2.1
+
+```
+$ git clone git@github.com:pulseq/pulseq.git
+$ git checkout 74eb4c06d66ca60a6a6d8548d3ccc1584bca0b98
+```
+The clone is now in a detached state. Later, to get back to the branch you were on, do
+```
+$ git checkout -
+```
+
+#### Call seq2ge.m as follows
+```
+pulsegeq.seq2ge('gre.seq', 'pulseqVersion', 'v1.2.1');
+```

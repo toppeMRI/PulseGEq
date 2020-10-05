@@ -77,5 +77,5 @@ $ git checkout -
 
 #### Call seq2ge.m as follows
 ```
-pulsegeq.seq2ge('gre.seq', 'pulseqVersion', 'v1.2.1');
+pulsegeq.seq2ge('gre-jemris.seq', 'pulseqVersion', 'v1.2.1');
 ```

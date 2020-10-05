@@ -1,45 +1,42 @@
 function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 % function seq2ge(seqarg, varargin)
 %
-% Pulseq to TOPPE file conversion.
+% Convert a Pulseq file (http://pulseq.github.io/) to a set of TOPPE files
+% that can be executed on GE MR scanners. 
 %
-% This script creates a .tar file containing the following:
+% See https://toppemri.github.io/ for more info on TOPPE.
+%
+% This script writes the following files to disk:
 %   *.mod:            One .mod file corresponds to one "unique" block (see below)
-%   modules.txt       List of .modfiles, and flags indicating whether the .wav file is RF/ADC/(gradients only)
+%   modules.txt       List of .mod files, and flags indicating whether each .mod file corresponds to an RF/ADC/(gradients only) module
 %   scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
 %
 % Inputs:
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
 % Input options:
-%   tarfile            Output file name. Default: 'out.tar'
-%   system             struct containing GE and TOPPE system specs. See +toppe/systemspecs.m.
-%   verbose            true or false (default)
-%   debug              display detailed info about progress (default: false)
-%
-% Output:
-%   TOPPE .tar file containing scanloop.txt, modules.txt, and .mod files
-%   In addition, the TOPPE sequence can be constructed from moduleArr and loopStructArr:
-%      >> [rf,gx,gy,gz] = sub_plotseq(moduleArr, loopStructArr, istart, istop);
+%   system            struct        Contains GE and TOPPE system specs. See +toppe/systemspecs.m
+%   verbose           boolean       Default: false
+%   debug             boolean       Display detailed info about progress (default: false)
+%   pulseqVersion     string        'v1.3.0' (default) or 'v1.2.1'
 %
 % Usage examples:
-%   >> seq2ge('myseqfile.seq');
+%   >> seq2ge('../examples/2DFLASH.seq');
+%   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
 %
-%   >> lims = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
-%   >> lims = toppe.systemspecs('maxSlew',15,'maxGrad',5');
-%   >> seq2ge('myseqfile.seq', 'system', lims);
+%   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
+%   >> seq2ge('2DFLASH.seq', 'system', system, 'verbose', true);
 %
 %   >> seq = mr.Sequence();
-%   >> seq.read('myseqfile.seq');
-%   >> seq2ge(seq, 'system', lims);
+%   >> seq.read('2DFLASH.seq');
+%   >> seq2ge(seq, 'system', system);
 %
-% See https://toppemri.github.io/ for more info on TOPPE.
 
 %% parse inputs
 % Defaults
-arg.tarfile = 'out.tar';
 arg.system  = toppe.systemspecs();
 arg.verbose = false;
 arg.debug = false;
+arg.pulseqVersion = 'v1.3.0';
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -59,13 +56,22 @@ switch arg.system.toppe.version
 		error('Please use TOPPE v2 or v3');
 end
 
+switch arg.pulseqVersion
+	case 'v1.2.1'
+		nEvents = 6;   % number of events per block (number of columns in .seq file)
+	case 'v1.3.0'
+		nEvents = 7;
+	otherwise
+		error(sprintf('Pulseq version %s is not supported', arg.pulseqVersion));
+end
+
 %% Get seq object
 if isa(seqarg, 'char')
 	seq = mr.Sequence();
 	seq.read(seqarg);
 else
 	if ~isa(seqarg, 'mr.Sequence')
-		error('Input not an mr.Sequence object');
+		error('First argument is not an mr.Sequence object');
 	end
 	seq = seqarg;
 end
@@ -87,7 +93,7 @@ end
 
 % get contents of [BLOCKS] section
 blockEvents = cell2mat(seq.blockEvents);
-blockEvents = reshape(blockEvents, [7, length(seq.blockEvents)]).'; % hardcoded for as long as Pulseq does not include another element
+blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; % hardcoded for as long as Pulseq does not include another element
 
 % First entry in 'moduleArr' struct array
 ib = 1;

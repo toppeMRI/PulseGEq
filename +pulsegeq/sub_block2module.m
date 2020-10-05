@@ -22,6 +22,8 @@ function module = sub_block2module(block, blockid, system, modnum)
 %                   .npulses         number of different sets of waveforms (e.g., size(gx.waveforms,2))
 %                   .block           Pulseq block
 
+import pulsegeq.*
+
 %if length(moduleArr)+1 > system.toppe.nMaxModules
 %	error(sprintf('The number of modules exceeds system.toppe.nMaxModules (%d).\nAre you sure you need that many modules?', system.toppe.nMaxModules));
 %end

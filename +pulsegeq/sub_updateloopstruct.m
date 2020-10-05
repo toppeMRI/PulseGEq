@@ -9,6 +9,8 @@ function arg = sub_updateloopstruct(arg, block, nextblock, system, varargin)
 % Options
 %  see code below
 
+import pulsegeq.*
+
 % Initialize loopStruct struct
 if isempty(arg)
 	% Defaults

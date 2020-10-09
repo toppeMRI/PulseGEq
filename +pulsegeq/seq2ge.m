@@ -22,7 +22,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %   tarFile           string        default: 'toppeScanFiles.tar'
 %
 % Usage examples:
-%   >> seq2ge('../examples/2DFLASH.seq');
+%   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
 %   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
 %
 %   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');

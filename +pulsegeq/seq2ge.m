@@ -14,7 +14,8 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 % Inputs:
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
 % Input options:
-%   system            struct        Contains GE and TOPPE system specs. See +toppe/systemspecs.m
+%   system            struct        Contains GE and TOPPE system specs, including TOPPE version. See +toppe/systemspecs.m
+%   toppeVersion      string        'v2' (default) or 'v3'
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   pulseqVersion     string        'v1.3.0' (default) or 'v1.2.1'
@@ -37,6 +38,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %% parse inputs
 % Defaults
 arg.system  = toppe.systemspecs();
+arg.toppeVersion = 'v2';
 arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.3.0';
@@ -51,9 +53,7 @@ arg.tarFile = 'toppeScanFiles.tar';
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = toppe.utils.vararg_pair(arg, varargin);
 
-version = arg.system.toppe.version;
-
-switch version
+switch arg.toppeVersion
 	case 'v2' 
 		nCols = 16;   % number of columns in scanloop.txt
 	case 'v3' 
@@ -393,7 +393,7 @@ end
 % load .mod files
 mods = toppe.utils.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
-toppe.write2loop('setup', 'version', str2num(version(2))); 
+toppe.write2loop('setup', 'version', str2num(arg.toppeVersion(2))); 
 
 for ib = 1:length(loopStructArr)
 

@@ -18,6 +18,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   pulseqVersion     string        'v1.3.0' (default) or 'v1.2.1'
+%   tarFile           string        default: 'toppeScanFiles.tar'
 %
 % Usage examples:
 %   >> seq2ge('../examples/2DFLASH.seq');
@@ -39,6 +40,7 @@ arg.system  = toppe.systemspecs();
 arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.3.0';
+arg.tarFile = 'toppeScanFiles.tar';
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -49,7 +51,9 @@ arg.pulseqVersion = 'v1.3.0';
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = toppe.utils.vararg_pair(arg, varargin);
 
-switch arg.system.toppe.version
+version = arg.system.toppe.version;
+
+switch version
 	case 'v2' 
 		nCols = 16;   % number of columns in scanloop.txt
 	case 'v3' 
@@ -389,7 +393,7 @@ end
 % load .mod files
 mods = toppe.utils.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
-toppe.write2loop('setup'); 
+toppe.write2loop('setup', 'version', str2num(version(2))); 
 
 for ib = 1:length(loopStructArr)
 
@@ -451,7 +455,8 @@ for ib = 1:length(loopStructArr)
 		textraWarning = false;
 	end
 
-	toppe.write2loop(sprintf('module%d.mod',iMod), ...
+	%toppe.write2loop(sprintf('module%d.mod',iMod), ...
+	toppe.write2loop(moduleArr(iMod).ofname, ...
 		'Gamplitude',  Gamplitude, ...
 		'waveform',    iWav, ...
 		'RFamplitude', RFamplitude, ...
@@ -478,18 +483,18 @@ if arg.verbose
 	fprintf(' done\n');
 end
 
-return;
-
 %% Put TOPPE files in a .tar file (for convenience)
-system(sprintf('tar cf %s modules.txt scanloop.txt', arg.tarfile));
+system(sprintf('tar cf %s modules.txt scanloop.txt', arg.tarFile));
 for ic = 1:length(moduleArr)
-	system(sprintf('tar rf %s %s', arg.tarfile, moduleArr(ic).ofname));
+	system(sprintf('tar rf %s %s', arg.tarFile, moduleArr(ic).ofname));
 end
+
+return;
 
 % list archive contents
 if arg.verbose
-	fprintf('\nCreated %s containing the following files:\n', arg.tarfile);
-	system(sprintf('tar tf %s', arg.tarfile));
+	fprintf('\nCreated %s containing the following files:\n', arg.tarFile);
+	system(sprintf('tar tf %s', arg.tarFile));
 end
 
 % clean up

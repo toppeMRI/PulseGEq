@@ -14,13 +14,15 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 % Inputs:
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
 % Input options:
-%   system            struct        Contains GE and TOPPE system specs. See +toppe/systemspecs.m
+%   system            struct        Contains GE and TOPPE system specs, including TOPPE version. See +toppe/systemspecs.m
+%   toppeVersion      string        'v2' (default) or 'v3'
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   pulseqVersion     string        'v1.3.0' (default) or 'v1.2.1'
+%   tarFile           string        default: 'toppeScanFiles.tar'
 %
 % Usage examples:
-%   >> seq2ge('../examples/2DFLASH.seq');
+%   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
 %   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
 %
 %   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
@@ -36,9 +38,11 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %% parse inputs
 % Defaults
 arg.system  = toppe.systemspecs();
+arg.toppeVersion = 'v2';
 arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.3.0';
+arg.tarFile = 'toppeScanFiles.tar';
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -49,7 +53,7 @@ arg.pulseqVersion = 'v1.3.0';
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = toppe.utils.vararg_pair(arg, varargin);
 
-switch arg.system.toppe.version
+switch arg.toppeVersion
 	case 'v2' 
 		nCols = 16;   % number of columns in scanloop.txt
 	case 'v3' 
@@ -389,7 +393,7 @@ end
 % load .mod files
 mods = toppe.utils.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
-toppe.write2loop('setup'); 
+toppe.write2loop('setup', 'version', str2num(arg.toppeVersion(2))); 
 
 for ib = 1:length(loopStructArr)
 
@@ -433,7 +437,7 @@ for ib = 1:length(loopStructArr)
 	end
 
 	RFphase  = loopStructArr(ib).rfphs;
-	DAQphase = loopStructArr(ib).rfphs;
+	DAQphase = loopStructArr(ib).recphs;
 	RFspoil  = false;
 	RFoffset = loopStructArr(ib).rffreq;    % Hz
 	slice    = loopStructArr(ib).slice;
@@ -451,7 +455,8 @@ for ib = 1:length(loopStructArr)
 		textraWarning = false;
 	end
 
-	toppe.write2loop(sprintf('module%d.mod',iMod), ...
+	%toppe.write2loop(sprintf('module%d.mod',iMod), ...
+	toppe.write2loop(moduleArr(iMod).ofname, ...
 		'Gamplitude',  Gamplitude, ...
 		'waveform',    iWav, ...
 		'RFamplitude', RFamplitude, ...
@@ -478,18 +483,18 @@ if arg.verbose
 	fprintf(' done\n');
 end
 
-return;
-
 %% Put TOPPE files in a .tar file (for convenience)
-system(sprintf('tar cf %s modules.txt scanloop.txt', arg.tarfile));
+system(sprintf('tar cf %s modules.txt scanloop.txt', arg.tarFile));
 for ic = 1:length(moduleArr)
-	system(sprintf('tar rf %s %s', arg.tarfile, moduleArr(ic).ofname));
+	system(sprintf('tar rf %s %s', arg.tarFile, moduleArr(ic).ofname));
 end
+
+return;
 
 % list archive contents
 if arg.verbose
-	fprintf('\nCreated %s containing the following files:\n', arg.tarfile);
-	system(sprintf('tar tf %s', arg.tarfile));
+	fprintf('\nCreated %s containing the following files:\n', arg.tarFile);
+	system(sprintf('tar tf %s', arg.tarFile));
 end
 
 % clean up

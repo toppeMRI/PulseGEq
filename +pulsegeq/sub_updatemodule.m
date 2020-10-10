@@ -18,9 +18,15 @@ else
 	module.blockids(end+1) = blockid;
 end
 
+%
+if ~isempty(block.adc) & ~isempty(block.rf)
+	error('Block/module can not be both RF transmit and receive');
+end
+
 % RF
 if ~isempty(block.rf)
 	module.hasRF = 1;
+	module.ofname = 'tipdown.mod';
 
 	% interpolate to GE raster time (4us)
 	rf = downsample(block.rf.signal, round(dt/1e-6));     % downsample from 1us to 4us (GE raster time)
@@ -107,6 +113,7 @@ end
 % ADC
 if ~isempty(block.adc)
 	module.hasADC = 1;
+	module.ofname = 'readout.mod';
 %	nAdc = round(block.adc.dwell/dt*block.adc.numSamples);
 %	module.nt = max(nt, nAdc);
 %else

@@ -437,7 +437,7 @@ for ib = 1:length(loopStructArr)
 	end
 
 	RFphase  = loopStructArr(ib).rfphs;
-	DAQphase = loopStructArr(ib).rfphs;
+	DAQphase = loopStructArr(ib).recphs;
 	RFspoil  = false;
 	RFoffset = loopStructArr(ib).rffreq;    % Hz
 	slice    = loopStructArr(ib).slice;

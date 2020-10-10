@@ -45,8 +45,8 @@ if ~isempty(block)
 		start_core = system.toppe.start_core_grad;  % module containing only gradients (no RF or DAQ)
 	end
 
-	module.hasADC = 1;
-	module.hasRF = 1;
+%	module.hasADC = 1;
+%	module.hasRF = 1;
 	if ~isempty(block.delay)
 		% Set textra to delay block, minus system-related overhead.
 		% For an explanation of toppeDelay, see toppe_timing.pdf.
@@ -78,6 +78,11 @@ if ~isempty(block)
 		arg.rfamp = max(abs(block.rf.signal)/system.gamma);    % Gauss
 		arg.rfphs = block.rf.phaseOffset;                      % radians
 		arg.rffreq = block.rf.freqOffset;                      % Hz
+	end
+
+	% receive phase
+	if ~isempty(block.adc) 
+		arg.recphs = block.adc.phaseOffset;                      % radians
 	end
 
 	% gradient amplitude

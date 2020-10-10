@@ -45,8 +45,6 @@ if ~isempty(block)
 		start_core = system.toppe.start_core_grad;  % module containing only gradients (no RF or DAQ)
 	end
 
-%	module.hasADC = 1;
-%	module.hasRF = 1;
 	if ~isempty(block.delay)
 		% Set textra to delay block, minus system-related overhead.
 		% For an explanation of toppeDelay, see toppe_timing.pdf.
@@ -96,13 +94,6 @@ if ~isempty(block)
 				eval( sprintf('wav = block.%s.waveform/system.gamma/100;', ax) );    % Gauss/cm
 				wmax = max(abs(wav));
 				eval( sprintf('arg.%samp = wmax;', ax) );
-				%wmax = max(wav);
-				%wmin = min(wav);
-				%if abs(wmin) > wmax
-				%	eval( sprintf('arg.%samp = wmin') );
-				%else
-				%	eval( sprintf('arg.%samp = wax') );
-				%end
 			end
 		else
 		end

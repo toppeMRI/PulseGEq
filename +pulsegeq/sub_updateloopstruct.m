@@ -75,7 +75,7 @@ if ~isempty(block)
 	if ~isempty(block.rf)
 		arg.rfamp = max(abs(block.rf.signal)/system.gamma);    % Gauss
 		arg.rfphs = block.rf.phaseOffset;                      % radians
-		arg.rffreq = block.rf.freqOffset;                      % Hz
+		arg.rffreq = round(block.rf.freqOffset);                      % Hz
 	end
 
 	% receive phase

@@ -20,6 +20,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %   debug             boolean       Display detailed info about progress (default: false)
 %   pulseqVersion     string        'v1.3.0' (default) or 'v1.2.1'
 %   tarFile           string        default: 'toppeScanFiles.tar'
+%   blockStop         int           end at this block in the .seq file (for testing)
 %
 % Usage examples:
 %   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
@@ -43,6 +44,7 @@ arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.3.0';
 arg.tarFile = 'toppeScanFiles.tar';
+arg.blockStop = [];
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -101,6 +103,10 @@ end
 blockEvents = cell2mat(seq.blockEvents);
 blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; % hardcoded for as long as Pulseq does not include another element
 
+if ~isempty(arg.blockStop)
+	blockEvents = blockEvents(1:arg.blockStop, :);
+end
+
 % First entry in 'moduleArr' struct array
 ib = 1;
 block = seq.getBlock(ib);
@@ -119,14 +125,19 @@ view = 1;
 echo = 0; 
 adcCount = 0;
 
-for ib = 2:length(seq.blockEvents)
+% h = waitbar(0,'Looping through blocks and looking for uniqueness...');
+for ib = 2:size(blockEvents,1)
 	if ~mod(ib, 500)
-		fprintf('.');
+	%	waitbar(ib/size(blockEvents,1),h)
+		for inb = 1:20
+			fprintf('\b');
+ 		end
+		fprintf('Block %d/%d', ib, size(blockEvents, 1));
 	end
 
 	block = seq.getBlock(ib);
 
-	if ib < length(seq.blockEvents)
+	if ib < size(blockEvents,1)
 		nextblock = seq.getBlock(ib+1);  % used to set textra column in scanloop.txt
 	else
 		nextblock = [];

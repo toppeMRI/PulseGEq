@@ -39,7 +39,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %% parse inputs
 % Defaults
 arg.system  = toppe.systemspecs();
-arg.toppeVersion = 'v2';
+arg.toppeVersion = 'v3';
 arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.3.1';

@@ -36,6 +36,9 @@ if ~isempty(block.rf)
 	%	warning('rf waveform is < 24 points and will not be interpolated to GE raster time');
 	%end
 
+	% add delay
+	rf = [linspace(0, 0, round(block.rf.delay/dt))'; rf];
+
 	% Normalize and add to waveforms (loopStructArr array will contain rf amplitude for each block)
 	rf = rf/max(abs(rf(:)));
 	module.rf = sub_addwav(module.rf, rf);         % Normalized to amplitude 1

@@ -18,6 +18,7 @@ if ~isempty(blk.gz)
 end
 if ~isempty(blk.rf)
    rf = downsample(blk.rf.signal/gamma, round(raster/1e-6));  % Gauss
+	rf = [linspace(0, 0, round(blk.rf.delay/raster))'; rf];
 end
 	
 subplot(121); hold on; 

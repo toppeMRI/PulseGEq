@@ -346,11 +346,6 @@ for ic = 1:length(moduleArr)
 		fprintf('Creating .mod file number %d...\n', ic);
 	end
 
-	% force rf waveform to be non-empty to avoid error in writemod (does no harm; will not be played out)
-	if isempty(rf) 
-		%rf = 0.001*ones(moduleArr(ic).nt, 1);
-	end
-
 	% make sure waveforms start and end at zero, and are on a 4-sample boundary (toppe.writemod requires this)
 	channels = {'rf','gx','gy','gz'};
 	zeropadWarning = false;

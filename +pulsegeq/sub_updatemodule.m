@@ -92,6 +92,21 @@ for ax = {'gx','gy','gz'};
 	end
 end
 
+% ADC
+if ~isempty(block.adc)
+	module.hasADC = 1;
+	%module.ofname = 'readout.mod';
+%	nAdc = round(block.adc.dwell/dt*block.adc.numSamples);
+%	module.nt = max(nt, nAdc);
+%else
+%	module.nt = nt;
+end
+
+% if ADC block without gradients, create 'dummy' waveform to keep writemod happy
+if module.hasADC & all(isempty([module.rf module.gx module.gy module.gz]))
+	module.gx = 0.01*ones(round((block.adc.delay + block.adc.dwell*block.adc.numSamples)/dt), 1);
+end
+
 % store waveform length (useful for comparing blocks)
 nt = max([length(module.rf) length(module.gx) ...
 	              length(module.gy) length(module.gz)]);
@@ -111,16 +126,6 @@ for ii=1:length(gradChannels)
 		wav = [wav; zeros(nt-size(wav,1), size(wav,2))];
 		eval(sprintf('module.%s= wav;', gradChannels{ii}));
 	end
-end
-
-% ADC
-if ~isempty(block.adc)
-	module.hasADC = 1;
-	%module.ofname = 'readout.mod';
-%	nAdc = round(block.adc.dwell/dt*block.adc.numSamples);
-%	module.nt = max(nt, nAdc);
-%else
-%	module.nt = nt;
 end
 
 module.nt = nt;

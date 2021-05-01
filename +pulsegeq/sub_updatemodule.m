@@ -103,7 +103,7 @@ if ~isempty(block.adc)
 end
 
 % if ADC block without gradients, create 'dummy' waveform to keep writemod happy
-if module.hasADC & all(isempty([module.rf module.gx module.gy module.gz]))
+if module.hasADC & length([module.rf(:); module.gx(:); module.gy(:); module.gz(:)]) == 0
 	module.gx = 0.01*ones(round((block.adc.delay + block.adc.dwell*block.adc.numSamples)/dt), 1);
 end
 

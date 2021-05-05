@@ -40,17 +40,13 @@ if ~isempty(blk.rf)
 	legend('rf (G)');
 end
 
-tmp = sort([tgx(1) tgy(1) tgz(1) trf(1)]);
-tbeg = tmp(1);
-tmp = sort([tgx(end) tgy(end) tgz(end) trf(end)]);
-tend = tmp(end);
+tbeg = min([tgx(1) tgy(1) tgz(1) trf(1)]);
+tend = max([tgx(end) tgy(end) tgz(end) trf(end)]);
 
 subplot(121); 
 legend('gx (G/cm)', 'gy', 'gz');
-tmp = sort([max(gx) max(gy) max(gz)]);
-gmax = tmp(end);
-tmp = sort([min(gx) min(gy) min(gz)]);
-gmin = tmp(end);
+gmax = max([max(gx) max(gy) max(gz)]);
+gmin = min([min(gx) min(gy) min(gz)]);
 if ~isempty(gx) | ~isempty(gy) | ~isempty(gz)
 	axis([max(0,tbeg-0.5e-3) tend+0.5e-3 gmin-0.1 gmax+0.1]);
 end

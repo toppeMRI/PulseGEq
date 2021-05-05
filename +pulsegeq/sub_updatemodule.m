@@ -96,10 +96,10 @@ end
 if ~isempty(block.adc)
 	module.hasADC = 1;
 	%module.ofname = 'readout.mod';
-%	nAdc = round(block.adc.dwell/dt*block.adc.numSamples);
-%	module.nt = max(nt, nAdc);
-%else
-%	module.nt = nt;
+	tend = block.adc.delay + block.adc.dwell*block.adc.numSamples;  % sec
+	nAdc = round(tend/dt);
+else
+	nAdc = 0;
 end
 
 % if ADC block without gradients, create 'dummy' waveform to keep writemod happy
@@ -108,8 +108,9 @@ if module.hasADC & length([module.rf(:); module.gx(:); module.gy(:); module.gz(:
 end
 
 % store waveform length (useful for comparing blocks)
-nt = max([length(module.rf) length(module.gx) ...
-	              length(module.gy) length(module.gz)]);
+nt = max([ length(module.rf) length(module.gx) ...
+           length(module.gy) length(module.gz) ...
+           nAdc]);
 
 % pad with zeros as needed to ensure equal length of all (non-empty) waveforms
 npulses = 0;

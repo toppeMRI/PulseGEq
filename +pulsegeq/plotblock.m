@@ -51,9 +51,13 @@ tmp = sort([max(gx) max(gy) max(gz)]);
 gmax = tmp(end);
 tmp = sort([min(gx) min(gy) min(gz)]);
 gmin = tmp(end);
-axis([max(0,tbeg-0.5e-3) tend+0.5e-3 gmin-0.1 gmax+0.1]);
+if ~isempty(gx) | ~isempty(gy) | ~isempty(gz)
+	axis([max(0,tbeg-0.5e-3) tend+0.5e-3 gmin-0.1 gmax+0.1]);
+end
 
 subplot(122);
-axis([max(0,tbeg-0.5e-3) tend+0.5e-3 min(rf)-0.05 max(rf)+0.05]);
+if ~isempty(rf)
+	axis([max(0,tbeg-0.5e-3) tend+0.5e-3 min(rf)-0.05 max(rf)+0.05]);
+end
 
 

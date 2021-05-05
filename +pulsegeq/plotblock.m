@@ -1,36 +1,59 @@
-function plotblock(blk, gamma, raster)
-% 3T: gamma = 4257.6 Hz/G
-% raster: 4e-6; 
+function plotblock(blk, gradRasterTime, rfRasterTime)
 
-rf = [];
+gamma = 4257.6; % Hz/G
+
 gx = [];
 gy = [];
 gz = [];
+rf = [];
 
-if ~isempty(blk.gx)
-	gx = pulsegeq.sub_trap2shape(blk.gx, gamma, raster);
-end
-if ~isempty(blk.gy)
-	gy = pulsegeq.sub_trap2shape(blk.gy, gamma, raster);
-end
-if ~isempty(blk.gz)
-	gz = pulsegeq.sub_trap2shape(blk.gz, gamma, raster);
-end
-if ~isempty(blk.rf)
-   rf = downsample(blk.rf.signal/gamma, round(raster/1e-6));  % Gauss
-	rf = [linspace(0, 0, round(blk.rf.delay/raster))'; rf];
-end
-	
+tgx = 0;
+tgy = 0;
+tgz = 0;
+trf =0;
+
 subplot(121); hold on; 
-plot(raster*1e3*(1:length(gx)), gx, 'r.'); 
-plot(raster*1e3*(1:length(gy)), gy, 'g.'); 
-plot(raster*1e3*(1:length(gz)), gz, 'b.'); 
 xlabel('ms');
 ylabel('G/cm');
-legend('gx (G/cm)', 'gy', 'gz');
-if ~isempty(rf)
+
+if ~isempty(blk.gx)
+	gx = pulsegeq.sub_trap2shape(blk.gx, gamma, gradRasterTime);
+	tgx = linspace(blk.gx.delay+gradRasterTime, blk.gx.delay+gradRasterTime*length(gx), length(gx));
+	plot(tgx, gx, 'r.'); 
+end
+if ~isempty(blk.gy)
+	gy = pulsegeq.sub_trap2shape(blk.gy, gamma, gradRasterTime);
+	tgy = linspace(blk.gy.delay+gradRasterTime, blk.gy.delay+gradRasterTime*length(gy), length(gy));
+	plot(tgy, gy, 'g.'); 
+end
+if ~isempty(blk.gz)
+	gz = pulsegeq.sub_trap2shape(blk.gz, gamma, gradRasterTime);
+	tgz = linspace(blk.gz.delay+gradRasterTime, blk.gz.delay+gradRasterTime*length(gz), length(gz));
+	plot(tgz, gz, 'b.'); 
+end
+if ~isempty(blk.rf)
+   %rf = downsample(blk.rf.signal/gamma, round(raster/1e-6));  % Gauss
+	rf = blk.rf.signal/gamma; % Gauss
+	trf  = linspace(blk.rf.delay+rfRasterTime, blk.rf.delay+rfRasterTime*length(rf), length(rf));
 	subplot(122); 
-	plot(raster*1e3*(1:length(rf)), rf); ylabel('rf'); xlabel('ms');
+	plot(trf, rf, 'b.'); ylabel('rf'); xlabel('ms');
 	legend('rf (G)');
 end
+
+tmp = sort([tgx(1) tgy(1) tgz(1) trf(1)]);
+tbeg = tmp(1);
+tmp = sort([tgx(end) tgy(end) tgz(end) trf(end)]);
+tend = tmp(end);
+
+subplot(121); 
+legend('gx (G/cm)', 'gy', 'gz');
+tmp = sort([max(gx) max(gy) max(gz)]);
+gmax = tmp(end);
+tmp = sort([min(gx) min(gy) min(gz)]);
+gmin = tmp(end);
+axis([max(0,tbeg-0.5e-3) tend+0.5e-3 gmin-0.1 gmax+0.1]);
+
+subplot(122);
+axis([max(0,tbeg-0.5e-3) tend+0.5e-3 min(rf)-0.05 max(rf)+0.05]);
+
 

@@ -1,4 +1,9 @@
 function plotblock(blk, gradRasterTime, rfRasterTime)
+% function plotblock(blk, gradRasterTime, rfRasterTime)
+%
+% Inputs:
+%  blk     Pulseq block, e.g., blk = seq.getBlock(10);
+%  grad/rf raster time:  sec
 
 gamma = 4257.6; % Hz/G
 

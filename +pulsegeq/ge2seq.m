@@ -25,6 +25,7 @@ function seq = ge2seq(toppeTarFile, varargin)
 %  >> ge2seq('TOPPEseq.tar', 'system', lims, 'systemGE', sys);
 %
 
+import pulsegeq.*
 
 %% Parse inputs and set system values
 % defaults
@@ -34,8 +35,8 @@ arg.debugAdc       = false;
 arg.moduleListFile = 'modules.txt';
 arg.loopFile       = 'scanloop.txt';
 
-arg.system = mr.opts('MaxGrad', 32, 'GradUnit', 'mT/m',...
-                     'MaxSlew', 130, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
+arg.system = mr.opts('MaxGrad', 50, 'GradUnit', 'mT/m',...
+                     'MaxSlew', 200, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
                      'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
 
 arg.systemGE = toppe.systemspecs('addDelays', false);   % don't add delays before creating Pulseq blocks
@@ -61,11 +62,13 @@ end
 seq = mr.Sequence(lims);
 
 % Untar files
+if 0
 try
 	system(sprintf('tar xf %s', toppeTarFile));
 catch ME
 	error(ME.message);
 	return;
+end
 end
 
 % Read TOPPE scan info
@@ -75,9 +78,11 @@ d      = toppe.utils.tryread(@toppe.readloop,           arg.loopFile);         %
 modArr = toppe.utils.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   % module waveforms
 
 % clean up TOPPE files
+if false
 system('rm modules.txt scanloop.txt');
 for ic = 1:length(modArr)
 	system(sprintf('rm %s', modArr{ic}.fname));
+end
 end
 
 

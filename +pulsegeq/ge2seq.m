@@ -34,13 +34,16 @@ arg.debug          = false;
 arg.debugAdc       = false;
 arg.moduleListFile = 'modules.txt';
 arg.loopFile       = 'scanloop.txt';
-
-arg.system = mr.opts('MaxGrad', 50, 'GradUnit', 'mT/m',...
-                     'MaxSlew', 200, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
-                     'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
-
 arg.systemGE = toppe.systemspecs('addDelays', false);   % don't add delays before creating Pulseq blocks
-%arg.systemGE = toppe.systemspecs(); 
+
+raster = arg.systemGE.raster;  % 4e-6 s. For RF, gradients, and ADC.
+
+arg.system = mr.opts('rfRasterTime', raster, 'gradRasterTime', raster);
+
+%arg.system = mr.opts('maxGrad', 40, 'GradUnit', 'mT/m',...
+%                     'maxSlew', 150, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
+%							'rfRasterTime', raster, 'gradRasterTime', raster, ...
+%                     'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
 
 % Substitute varargin values as appropriate
 arg = toppe.utils.vararg_pair(arg, varargin);
@@ -58,21 +61,15 @@ arg.system.toppe.daqdel     = round(arg.systemSiemens.adcDeadTime*1e6);      % A
 arg.system.toppe.timetrwait = round(arg.systemSiemens.rfRingdownTime*1e6);   % (us)
 end
 
-% initialize Pulseq sequence object
-seq = mr.Sequence(lims);
-
 % Untar files
-if 0
 try
 	system(sprintf('tar xf %s', toppeTarFile));
 catch ME
 	error(ME.message);
 	return;
 end
-end
 
 % Read TOPPE scan info
-geRasterTime = arg.systemGE.raster;     % GE raster time (for RF, gradients, and ADC) (sec)
 max_pg_iamp  = 2^15-2;                  % max TOPPE/GE "instruction amplitude" (signed short int)
 d      = toppe.utils.tryread(@toppe.readloop,           arg.loopFile);         % scanloop array
 modArr = toppe.utils.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   % module waveforms
@@ -87,6 +84,10 @@ end
 
 
 %% Loop through scanloop.txt. Add each row as one Pulseq "block".
+
+% initialize Pulseq sequence object
+seq = mr.Sequence(lims);
+
 nt = size(d,1);    % number of startseq calls
 for ii = 1:nt
 	if ~mod(ii,250)
@@ -109,10 +110,10 @@ for ii = 1:nt
 	% convert to Pulseq units and rastertimes
 	% rf:   Hz,   1us
    % grad: Hz/m, 10us
-	rfwavPulseq = rf2pulseq(rfwav,geRasterTime,seq);
-	gxwavPulseq = g2pulseq( gxwav,geRasterTime,seq);
-	gywavPulseq = g2pulseq( gywav,geRasterTime,seq);
-	gzwavPulseq = g2pulseq( gzwav,geRasterTime,seq);
+	rfwavPulseq = rf2pulseq(rfwav,raster,seq);
+	gxwavPulseq = g2pulseq( gxwav,raster,seq);
+	gywavPulseq = g2pulseq( gywav,raster,seq);
+	gzwavPulseq = g2pulseq( gzwav,raster,seq);
 
 	% ensure equal duration (interpolation to Pulseq rastertimes can result in unequal duration)
 	% not needed?
@@ -212,7 +213,7 @@ for ii = 1:nt
 
 	% add delay block
 	if tdelay > 12;    % minimum duration of wait pulse in TOPPE
-		del = mr.makeDelay(round(tdelay*1e-6,5)); %delay also needs to be in multiples of rastertimes of 10us
+		del = mr.makeDelay(roundtoraster(tdelay*1e-6, raster)); % delay also needs to be in multiples of raster times
 		seq.addBlock(del);
 	end
 	

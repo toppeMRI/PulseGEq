@@ -8,7 +8,7 @@ function seq = ge2seq(toppeTarFile, varargin)
 %                     modules.txt       List of .mod files, and flags indicating whether the .wav file is RF/ADC/(gradients only)
 %                     scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
 % Options:
-%  seqfile            Output .seq file name
+%  seqFile            Output .seq file name
 %  moduleListFile     Text file listing all .mod files. Default: 'modules.txt'.
 %                     The .mod files listed must exist in the Matlab path.
 %  loopFile           Text file specifying the MR scan loop. Default: 'scanloop.txt'
@@ -16,20 +16,19 @@ function seq = ge2seq(toppeTarFile, varargin)
 %  systemGE           struct specifying GE system specs, see +toppe/systemspecs.m
 %
 % Examples:
-%  >> ge2seq('TOPPEseq.tar');
-%
+%  >> pulsegeq.ge2seq('cal.tar', 'seqFile', 'cal.seq');
 %  >> lims = mr.opts('MaxGrad', 32, 'GradUnit', 'mT/m',...
 %                    'MaxSlew', 130, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
 %                    'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
 %  >> sys = systemspecs('maxSlew', 130, 'slewUnit', 'T/m/s');
-%  >> ge2seq('TOPPEseq.tar', 'system', lims, 'systemGE', sys);
+%  >> ge2seq('cal.tar', 'system', lims, 'systemGE', sys);
 %
 
 import pulsegeq.*
 
 %% Parse inputs and set system values
 % defaults
-arg.seqfile        = 'out.seq';
+arg.seqFile        = 'out.seq';
 arg.debug          = false;
 arg.debugAdc       = false;
 arg.moduleListFile = 'modules.txt';
@@ -38,11 +37,12 @@ arg.systemGE = toppe.systemspecs('addDelays', false);   % don't add delays befor
 
 raster = arg.systemGE.raster;  % 4e-6 s. For RF, gradients, and ADC.
 
-arg.system = mr.opts('rfRasterTime', raster, 'gradRasterTime', raster);
+arg.system = mr.opts('rfRasterTime', raster, 'gradRasterTime', raster, ...
+                     'rfDeadTime', 100e-6, 'rfRingdownTime', 30e-6, ...
+                     'adcDeadTime', 20e-6);  
 
 %arg.system = mr.opts('maxGrad', 40, 'GradUnit', 'mT/m',...
 %                     'maxSlew', 150, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
-%							'rfRasterTime', raster, 'gradRasterTime', raster, ...
 %                     'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
 
 % Substitute varargin values as appropriate
@@ -90,8 +90,10 @@ seq = mr.Sequence(lims);
 
 nt = size(d,1);    % number of startseq calls
 for ii = 1:nt
-	if ~mod(ii,250)
-		fprintf('.');
+
+	if ~mod(ii,500)
+		for ib=1:60; fprintf('\b'); end;
+		fprintf('Parsing scan loop: %d of %d', ii, nt);
 	end
 
 	module = modArr{d(ii,1)};
@@ -107,16 +109,17 @@ for ii = 1:nt
 	gywav = gywav(:)';
 	gzwav = gzwav(:)';
 
-	% convert to Pulseq units and rastertimes
-	% rf:   Hz,   1us
-   % grad: Hz/m, 10us
-	rfwavPulseq = rf2pulseq(rfwav,raster,seq);
-	gxwavPulseq = g2pulseq( gxwav,raster,seq);
-	gywavPulseq = g2pulseq( gywav,raster,seq);
-	gzwavPulseq = g2pulseq( gzwav,raster,seq);
+	% convert to Pulseq units
+	% rf:   Hz
+   % grad: Hz/m
+	rfwavPulseq = rf2pulseq(rfwav); %(; ,raster,seq);
+	gxwavPulseq = g2pulseq( gxwav); %,raster,seq);
+	gywavPulseq = g2pulseq( gywav); %,raster,seq);
+	gzwavPulseq = g2pulseq( gzwav); %,raster,seq);
 
 	% ensure equal duration (interpolation to Pulseq rastertimes can result in unequal duration)
 	% not needed?
+if false
 	trf   = length(rfwavPulseq) * seq.rfRasterTime;
 	tgrad = length(gxwavPulseq) * seq.gradRasterTime;
 	ngradextra = ceil((trf-tgrad)/seq.gradRasterTime);
@@ -125,6 +128,7 @@ for ii = 1:nt
 	gzwavPulseq = toppe.utils.makeevenlength( [gzwavPulseq zeros(1, ngradextra)] );
 	tgrad  = length(gxwavPulseq) * seq.gradRasterTime;
 	rfwavPulseq = [rfwavPulseq zeros(1,round((tgrad-trf)/seq.rfRasterTime))];
+end
 
 	% Make Pulseq gradient structs (even all zero waveforms)
 	gx = mr.makeArbitraryGrad('x', gxwavPulseq, lims);
@@ -216,17 +220,29 @@ for ii = 1:nt
 		del = mr.makeDelay(roundtoraster(tdelay*1e-6, raster)); % delay also needs to be in multiples of raster times
 		seq.addBlock(del);
 	end
-	
 end
 fprintf('\n');
 
-%seq.plot();
-seq.write(arg.seqfile);
+
+%% Check whether the timing of the sequence is correct
+fprintf('Checking Pulseq timing...');
+[ok, error_report]=seq.checkTiming;
+fprintf('\n');
+
+if (ok)
+	fprintf('\tTiming check passed successfully\n');
+	seq.write(arg.seqFile);
+else
+	fprintf('\tTiming check failed! Error listing follows:\n');
+	fprintf([error_report{:}]);
+	fprintf('\n');
+end
 
 return;
 
 
-%% get gradient arguments (as string) to pass to seq.addBlock()
+
+%% helper function: get gradient arguments (as string) to pass to seq.addBlock()
 function argStr = getArgStr(hasg)
 
 switch hasg

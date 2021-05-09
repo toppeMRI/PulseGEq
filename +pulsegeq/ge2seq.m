@@ -225,15 +225,14 @@ fprintf('\n');
 
 
 %% Check whether the timing of the sequence is correct
-fprintf('Checking Pulseq timing...');
+fprintf('Checking Pulseq timing... ');
 [ok, error_report]=seq.checkTiming;
-fprintf('\n');
 
 if (ok)
-	fprintf('\tTiming check passed successfully\n');
+	fprintf('Timing check passed successfully\n');
 	seq.write(arg.seqFile);
 else
-	fprintf('\tTiming check failed! Error listing follows:\n');
+	fprintf('Timing check failed! Error listing follows:\n');
 	fprintf([error_report{:}]);
 	fprintf('\n');
 end

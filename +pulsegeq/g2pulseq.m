@@ -1,11 +1,6 @@
 function gout = g2pulseq(g,geRasterTime,seq)
-% convert gradient from Gauss/cm to Hz/m
-gamma = 4.2576e3;         % Hz/G
-gout = g * gamma * 100;   % Hz/m
-return;
-
 % convert gradient from Gauss/cm to Hz/m, and interpolate to seq.gradRasterTime
-gamma = 4.2576e3;      % Hz/G
+gamma = 4.2576e3;         % Hz/G
 g = g * gamma * 100;   % Hz/m
 T = numel(g)*geRasterTime;    % pulse duration
 tge = 0:geRasterTime:(T-geRasterTime);

@@ -37,7 +37,7 @@ arg.systemGE = toppe.systemspecs('addDelays', false);   % don't add delays befor
 
 raster = arg.systemGE.raster;  % 4e-6 s. For RF, gradients, and ADC.
 
-arg.system = mr.opts('rfRasterTime', raster, 'gradRasterTime', raster, ...
+arg.system = mr.opts('rfRasterTime', 1e-6, 'gradRasterTime', 10e-6, ...
                      'rfDeadTime', 100e-6, 'rfRingdownTime', 30e-6, ...
                      'adcDeadTime', 20e-6);  
 
@@ -112,14 +112,12 @@ for ii = 1:nt
 	% convert to Pulseq units
 	% rf:   Hz
    % grad: Hz/m
-	rfwavPulseq = rf2pulseq(rfwav); %(; ,raster,seq);
-	gxwavPulseq = g2pulseq( gxwav); %,raster,seq);
-	gywavPulseq = g2pulseq( gywav); %,raster,seq);
-	gzwavPulseq = g2pulseq( gzwav); %,raster,seq);
+	rfwavPulseq = rf2pulseq(rfwav,raster,seq);
+	gxwavPulseq = g2pulseq( gxwav,raster,seq);
+	gywavPulseq = g2pulseq( gywav,raster,seq);
+	gzwavPulseq = g2pulseq( gzwav,raster,seq);
 
 	% ensure equal duration (interpolation to Pulseq rastertimes can result in unequal duration)
-	% not needed?
-if false
 	trf   = length(rfwavPulseq) * seq.rfRasterTime;
 	tgrad = length(gxwavPulseq) * seq.gradRasterTime;
 	ngradextra = ceil((trf-tgrad)/seq.gradRasterTime);
@@ -128,7 +126,6 @@ if false
 	gzwavPulseq = toppe.utils.makeevenlength( [gzwavPulseq zeros(1, ngradextra)] );
 	tgrad  = length(gxwavPulseq) * seq.gradRasterTime;
 	rfwavPulseq = [rfwavPulseq zeros(1,round((tgrad-trf)/seq.rfRasterTime))];
-end
 
 	% Make Pulseq gradient structs (even all zero waveforms)
 	gx = mr.makeArbitraryGrad('x', gxwavPulseq, lims);

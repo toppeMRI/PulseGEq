@@ -1,12 +1,7 @@
 function rfout = rf2pulseq(rf,geRasterTime,seq)
-% convert rf units from Gauss to Hz
-gamma = 4.2576e3;       % Hz/G
-rfout = rf*gamma;       % Hz
-
-return;
-
-
 % convert rf units from Gauss to Hz, and interpolate to seq.rfRasterTime
+gamma = 4.2576e3;       % Hz/G
+rf = rf*gamma;       % Hz
 T = numel(rf)*geRasterTime;   % pulse duration
 tge = 0:geRasterTime:(T-geRasterTime);
 t = 0:seq.rfRasterTime:(T-seq.rfRasterTime);

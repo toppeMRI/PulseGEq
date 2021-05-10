@@ -38,7 +38,7 @@ arg.systemGE = toppe.systemspecs('addDelays', false);   % don't add delays befor
 raster = arg.systemGE.raster;  % 4e-6 s. For RF, gradients, and ADC.
 
 arg.system = mr.opts('rfRasterTime', 1e-6, 'gradRasterTime', 10e-6, ...
-                     'rfDeadTime', 100e-6, 'rfRingdownTime', 30e-6, ...
+                     'rfDeadTime', 100e-6, 'rfRingdownTime', 20e-6, ...
                      'adcDeadTime', 20e-6);  
 
 %arg.system = mr.opts('maxGrad', 40, 'GradUnit', 'mT/m',...
@@ -91,7 +91,7 @@ seq = mr.Sequence(lims);
 nt = size(d,1);    % number of startseq calls
 for ii = 1:nt
 
-	if ~mod(ii,500)
+	if ~mod(ii,100)
 		for ib=1:60; fprintf('\b'); end;
 		fprintf('Parsing scan loop: %d of %d', ii, nt);
 	end

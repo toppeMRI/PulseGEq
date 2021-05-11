@@ -103,6 +103,9 @@ for ii = 1:nt
 	[~, ~, ~, ~, rfwav, gxwav, gywav, gzwav, tdelay] = toppe.plotseq(ii, ii, ...
 		'loopArr', d, 'mods', modArr, 'doDisplay', false, 'system', arg.systemGE);  
 
+	% add delay to approximate gap between modules in TOPPE (TODO: make this more exact)
+	tdelay = tdelay + 200;  % us
+
 	% pulseq likes row vectors
 	rfwav = rfwav(:)';
 	gxwav = gxwav(:)';
@@ -222,7 +225,7 @@ for ii = 1:nt
 
 	% add delay block
 	if tdelay > 12;    % minimum duration of wait pulse in TOPPE
-		del = mr.makeDelay(roundtoraster(tdelay*1e-6, raster)); % delay also needs to be in multiples of raster times
+		del = mr.makeDelay(roundtoraster(tdelay*1e-6, lims.gradRasterTime)); % delay also needs to be in multiples of raster times
 		seq.addBlock(del);
 	end
 end

@@ -143,8 +143,8 @@ for ii = 1:nt
 	freqOffset  = d(ii,15);                         % Hz
 
 	if module.hasRF
-		phaseOffset = d(ii,12)/max_pg_iamp*pi;          % radians
-		flip = pi; % d(ii,2)/max_pg_iamp*pi;
+		phaseOffset = d(ii,12)/max_pg_iamp*pi;  % radians
+		flip = module.paramsfloat(16)/180*pi;   %  assumes that flip angle is stored in .mod file header
 
 		rf = mr.makeArbitraryRf(rfwavPulseq, flip, 'FreqOffset', freqOffset, ...
 			'PhaseOffset', phaseOffset, 'system', lims, 'delay', lims.rfDeadTime);
@@ -158,7 +158,6 @@ for ii = 1:nt
 		else
 			eval( sprintf( 'seq.addBlock(rf, %s, adcPad)', strArg) );
 		end
-
 		if arg.debug
 			clf;
 			subplot(221); plot(abs(rf.signal),'r'); title(sprintf('max = %f', max(abs(rf.signal)))); ylabel('Hz');

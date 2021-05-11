@@ -143,7 +143,7 @@ for ii = 1:nt
 	if ~all(gzwavPulseq == 0)
 		hasg = bitset(hasg,3);
 	end
-	strArg = getArgStr(hasg);        % 'gz' or 'gx,gy,gz' or... as appropriate
+	strArg = getStrArg(hasg);        % 'gz' or 'gx,gy,gz' or... as appropriate
 
 	freqOffset  = d(ii,15);                         % Hz
 
@@ -153,6 +153,10 @@ for ii = 1:nt
 
 		rf = mr.makeArbitraryRf(rfwavPulseq, flip, 'FreqOffset', freqOffset, ...
 			'PhaseOffset', phaseOffset, 'system', lims);
+
+		gx.delay = lims.rfDeadTime; % - 10e-6;   %
+		gy.delay = lims.rfDeadTime;
+		gz.delay = lims.rfDeadTime;
 
 		if isempty(strArg)
 			seq.addBlock(rf);
@@ -177,6 +181,10 @@ for ii = 1:nt
 			adc = mr.makeAdc(numel(gx.waveform), lims, 'Dwell', seq.gradRasterTime, 'delay', 0,...
 				'freqOffset', freqOffset, 'phaseOffset', phaseOffset);
 		end
+
+		gx.delay = lims.adcDeadTime;
+		gy.delay = lims.adcDeadTime;
+		gz.delay = lims.adcDeadTime;
 
 		if isempty(strArg)
 			seq.addBlock(adc);
@@ -239,7 +247,7 @@ return;
 
 
 %% helper function: get gradient arguments (as string) to pass to seq.addBlock()
-function argStr = getArgStr(hasg)
+function argStr = getStrArg(hasg)
 
 switch hasg
 	case 0

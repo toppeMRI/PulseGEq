@@ -9,6 +9,8 @@ function seq = ge2seq(toppeTarFile, varargin)
 %                     scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
 % Options:
 %  seqFile            Output .seq file name
+%  FOV                [1 3] (m)
+%  name               string
 %  moduleListFile     Text file listing all .mod files. Default: 'modules.txt'.
 %                     The .mod files listed must exist in the Matlab path.
 %  loopFile           Text file specifying the MR scan loop. Default: 'scanloop.txt'
@@ -29,13 +31,13 @@ import pulsegeq.*
 %% Parse inputs and set system values
 % defaults
 arg.seqFile        = 'out.seq';
+arg.FOV            = [];
+arg.name           = 'from_ge2seq';
 arg.debug          = false;
 arg.debugAdc       = false;
 arg.moduleListFile = 'modules.txt';
 arg.loopFile       = 'scanloop.txt';
 arg.systemGE = toppe.systemspecs('addDelays', false);   % don't add delays before creating Pulseq blocks
-
-raster = arg.systemGE.raster;  % 4e-6 s. For RF, gradients, and ADC.
 
 arg.system = mr.opts('rfRasterTime', 1e-6, 'gradRasterTime', 10e-6, ...
                      'rfDeadTime', 100e-6, 'rfRingdownTime', 20e-6, ...
@@ -79,6 +81,8 @@ modArr = toppe.utils.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   %
 
 % initialize Pulseq sequence object
 seq = mr.Sequence(lims);
+
+raster = arg.systemGE.raster;  % 4e-6 s
 
 nt = size(d,1);    % number of startseq calls
 for ii = 1:nt
@@ -156,7 +160,7 @@ for ii = 1:nt
 		if isempty(strArg)
 			seq.addBlock(rf); %, adcPad);
 		else
-			eval( sprintf( 'seq.addBlock(rf, %s, adcPad)', strArg) );
+			eval( sprintf( 'seq.addBlock(rf, %s, adcPad)', strArg) ); % TODO: remove adcPad
 		end
 		if arg.debug
 			clf;
@@ -222,6 +226,10 @@ fprintf('\n');
 fprintf('Checking Pulseq timing... ');
 [ok, error_report]=seq.checkTiming;
 if (ok)
+	if ~isempty(arg.FOV)
+		seq.setDefinition('FOV', arg.FOV);
+	end
+	seq.setDefinition('Name', arg.name);
 	seq.write(arg.seqFile);
 	fprintf('Timing check passed successfully\n');
 else

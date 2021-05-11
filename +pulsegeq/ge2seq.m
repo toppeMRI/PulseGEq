@@ -147,11 +147,11 @@ for ii = 1:nt
 		flip = module.paramsfloat(16)/180*pi;   %  assumes that flip angle is stored in .mod file header
 
 		rf = mr.makeArbitraryRf(rfwavPulseq, flip, 'FreqOffset', freqOffset, ...
-			'PhaseOffset', phaseOffset, 'system', lims, 'delay', lims.rfDeadTime);
+			'PhaseOffset', phaseOffset, 'system', lims, 'delay', lims.rfDeadTime + 10e-6); % seq.testReport says that delay should be > rfDeadTime
 
-		gx.delay = lims.rfDeadTime; % - 10e-6;   %
-		gy.delay = lims.rfDeadTime;
-		gz.delay = lims.rfDeadTime;
+		gx.delay = lims.rfDeadTime + 10e-6;
+		gy.delay = lims.rfDeadTime + 10e-6;
+		gz.delay = lims.rfDeadTime + 10e-6;
 
 		if isempty(strArg)
 			seq.addBlock(rf); %, adcPad);
@@ -229,6 +229,9 @@ else
 	fprintf([error_report{:}]);
 	fprintf('\n');
 end
+
+%rep = seq.testReport;
+%fprintf([rep{:}]); 
 
 return;
 

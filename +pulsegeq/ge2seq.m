@@ -106,6 +106,9 @@ for ii = 1:nt
 	% add delay to approximate gap between modules in TOPPE (TODO: make this more exact)
 	tdelay = tdelay + 200;  % us
 
+	% padding around adc blocks (added as block.delay)
+	adcPad = mr.makeDelay(roundtoraster(10*lims.adcDeadTime, lims.gradRasterTime)); % delay needs to be in multiples of raster times
+
 	% pulseq likes row vectors
 	rfwav = rfwav(:)';
 	gxwav = gxwav(:)';
@@ -155,16 +158,16 @@ for ii = 1:nt
 		flip = pi; % d(ii,2)/max_pg_iamp*pi;
 
 		rf = mr.makeArbitraryRf(rfwavPulseq, flip, 'FreqOffset', freqOffset, ...
-			'PhaseOffset', phaseOffset, 'system', lims);
+			'PhaseOffset', phaseOffset, 'system', lims, 'delay', lims.rfDeadTime);
 
 		gx.delay = lims.rfDeadTime; % - 10e-6;   %
 		gy.delay = lims.rfDeadTime;
 		gz.delay = lims.rfDeadTime;
 
 		if isempty(strArg)
-			seq.addBlock(rf);
+			seq.addBlock(rf); %, adcPad);
 		else
-			eval( sprintf( 'seq.addBlock(rf, %s)', strArg) );
+			eval( sprintf( 'seq.addBlock(rf, %s, adcPad)', strArg) );
 		end
 
 		if arg.debug
@@ -173,26 +176,22 @@ for ii = 1:nt
 			subplot(222); plot(angle(rf.signal),'r');  title(sprintf('max = %f', max(angle(rf.signal)))); ylabel('rad');
 		end
 	elseif module.hasDAQ
+		% drop first and last nDrop samples so it passes mr.checkTiming
+		nDrop = 40;
+		nAdc = numel(gxwav) - 2*nDrop;
 		phaseOffset = d(ii,13)/max_pg_iamp*pi;          % radians
-		if arg.debugAdc
-			% delay and shorten adc window
-			nadc = 2*round(numel(gx.waveform)/4);
-			delay = round(nadc/4)*seq.gradRasterTime;
-			adc = mr.makeAdc(nadc, lims, 'Dwell', raster, 'delay', delay, ...
-				'freqOffset', freqOffset, 'phaseOffset', phaseOffset);
-		else
-			adc = mr.makeAdc(numel(gxwav), lims, 'Dwell', raster, 'delay', 0,...
-				'freqOffset', freqOffset, 'phaseOffset', phaseOffset);
-		end
+		adc = mr.makeAdc(nAdc, 'system', lims, 'Dwell', raster, 'delay', nDrop*raster, ...
+			'freqOffset', freqOffset, 'phaseOffset', phaseOffset);
 
+		% an attempt at getting the gradients and ADC to line up in seq.plot
 		gx.delay = lims.adcDeadTime;
 		gy.delay = lims.adcDeadTime;
 		gz.delay = lims.adcDeadTime;
 
 		if isempty(strArg)
-			seq.addBlock(adc);
+			seq.addBlock(adc, adcPad);
 		else
-			eval( sprintf( 'seq.addBlock(%s, adc)', strArg) );
+			eval( sprintf( 'seq.addBlock(%s, adc, adcPad)', strArg) );
 		end
 	else
 		if ~isempty(strArg)
@@ -235,15 +234,15 @@ fprintf('\n');
 %% Check whether the timing of the sequence is correct
 fprintf('Checking Pulseq timing... ');
 [ok, error_report]=seq.checkTiming;
-
 if (ok)
 	fprintf('Timing check passed successfully\n');
-	seq.write(arg.seqFile);
 else
 	fprintf('Timing check failed! Error listing follows:\n');
 	fprintf([error_report{:}]);
 	fprintf('\n');
 end
+
+seq.write(arg.seqFile);
 
 return;
 

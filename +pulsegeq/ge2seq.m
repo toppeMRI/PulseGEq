@@ -74,14 +74,6 @@ max_pg_iamp  = 2^15-2;                  % max TOPPE/GE "instruction amplitude" (
 d      = toppe.utils.tryread(@toppe.readloop,           arg.loopFile);         % scanloop array
 modArr = toppe.utils.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   % module waveforms
 
-% clean up TOPPE files
-if false
-system('rm modules.txt scanloop.txt');
-for ic = 1:length(modArr)
-	system(sprintf('rm %s', modArr{ic}.fname));
-end
-end
-
 
 %% Loop through scanloop.txt. Add each row as one Pulseq "block".
 
@@ -102,9 +94,6 @@ for ii = 1:nt
 	% rf: Gauss; gradients: Gauss/cm; tdelay: microsec
 	[~, ~, ~, ~, rfwav, gxwav, gywav, gzwav, tdelay] = toppe.plotseq(ii, ii, ...
 		'loopArr', d, 'mods', modArr, 'doDisplay', false, 'system', arg.systemGE);  
-
-	% add delay to approximate gap between modules in TOPPE (TODO: make this more exact)
-	tdelay = tdelay + 200;  % us
 
 	% padding around adc blocks (added as block.delay)
 	adcPad = mr.makeDelay(roundtoraster(10*lims.adcDeadTime, lims.gradRasterTime)); % delay needs to be in multiples of raster times
@@ -222,27 +211,25 @@ for ii = 1:nt
 		input('press any key to continue');
 	end
 
-	% add delay block
-	if tdelay > 12;    % minimum duration of wait pulse in TOPPE
-		del = mr.makeDelay(roundtoraster(tdelay*1e-6, lims.gradRasterTime)); % delay also needs to be in multiples of raster times
-		seq.addBlock(del);
-	end
+	% add delay block to approximate gap between modules in TOPPE (TODO: make this more exact)
+	tdelay = tdelay + 200;  % us
+	del = mr.makeDelay(roundtoraster(tdelay*1e-6, lims.gradRasterTime)); % delay also needs to be in multiples of raster times
+	seq.addBlock(del);
 end
 fprintf('\n');
 
 
-%% Check whether the timing of the sequence is correct
+%% Check sequence timing and write to file
 fprintf('Checking Pulseq timing... ');
 [ok, error_report]=seq.checkTiming;
 if (ok)
+	seq.write(arg.seqFile);
 	fprintf('Timing check passed successfully\n');
 else
 	fprintf('Timing check failed! Error listing follows:\n');
 	fprintf([error_report{:}]);
 	fprintf('\n');
 end
-
-seq.write(arg.seqFile);
 
 return;
 

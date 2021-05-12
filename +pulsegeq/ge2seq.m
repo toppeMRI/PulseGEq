@@ -147,7 +147,7 @@ for ii = 1:nt
 	freqOffset  = d(ii,15);                         % Hz
 
 	if module.hasRF
-		phaseOffset = d(ii,12)/max_pg_iamp*pi;  % radians
+		phaseOffset = 0;   % NB! RF phase has already been applied in plotseq. % d(ii,12)/max_pg_iamp*pi;  % radians
 		flip = module.paramsfloat(16)/180*pi;   %  assumes that flip angle is stored in .mod file header
 
 		rf = mr.makeArbitraryRf(rfwavPulseq, flip, 'FreqOffset', freqOffset, ...

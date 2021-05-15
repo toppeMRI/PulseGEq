@@ -36,6 +36,9 @@ if ~isempty(block.rf)
 	%	warning('rf waveform is < 24 points and will not be interpolated to GE raster time');
 	%end
 
+	% add delay
+	rf = [linspace(0, 0, round(block.rf.delay/dt))'; rf];
+
 	% Normalize and add to waveforms (loopStructArr array will contain rf amplitude for each block)
 	rf = rf/max(abs(rf(:)));
 	module.rf = sub_addwav(module.rf, rf);         % Normalized to amplitude 1
@@ -89,9 +92,25 @@ for ax = {'gx','gy','gz'};
 	end
 end
 
+% ADC
+if ~isempty(block.adc)
+	module.hasADC = 1;
+	%module.ofname = 'readout.mod';
+	tend = block.adc.delay + block.adc.dwell*block.adc.numSamples;  % sec
+	nAdc = round(tend/dt);
+else
+	nAdc = 0;
+end
+
+% if ADC block without gradients, create 'dummy' waveform to keep writemod happy
+if module.hasADC & length([module.rf(:); module.gx(:); module.gy(:); module.gz(:)]) == 0
+	module.gx = 0.01*ones(round((block.adc.delay + block.adc.dwell*block.adc.numSamples)/dt), 1);
+end
+
 % store waveform length (useful for comparing blocks)
-nt = max([length(module.rf) length(module.gx) ...
-	              length(module.gy) length(module.gz)]);
+nt = max([ length(module.rf) length(module.gx) ...
+           length(module.gy) length(module.gz) ...
+           nAdc]);
 
 % pad with zeros as needed to ensure equal length of all (non-empty) waveforms
 npulses = 0;
@@ -108,16 +127,6 @@ for ii=1:length(gradChannels)
 		wav = [wav; zeros(nt-size(wav,1), size(wav,2))];
 		eval(sprintf('module.%s= wav;', gradChannels{ii}));
 	end
-end
-
-% ADC
-if ~isempty(block.adc)
-	module.hasADC = 1;
-	%module.ofname = 'readout.mod';
-%	nAdc = round(block.adc.dwell/dt*block.adc.numSamples);
-%	module.nt = max(nt, nAdc);
-%else
-%	module.nt = nt;
 end
 
 module.nt = nt;

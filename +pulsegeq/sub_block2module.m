@@ -42,7 +42,7 @@ for ax = {'rf', 'gx','gy','gz'}
 	module.(ax{1}) = [];
 end
 
-module.nt = length(module.rf);   % 0
+module.nt = 0;
 module.npulses = 0;
 
 % Update 'module' with waveform information from 'block'.

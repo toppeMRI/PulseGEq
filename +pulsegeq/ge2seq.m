@@ -8,7 +8,9 @@ function seq = ge2seq(toppeTarFile, varargin)
 %                     modules.txt       List of .mod files, and flags indicating whether the .wav file is RF/ADC/(gradients only)
 %                     scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
 % Options:
-%  seqfile            Output .seq file name
+%  seqFile            Output .seq file name
+%  FOV                [1 3] (m)
+%  name               string
 %  moduleListFile     Text file listing all .mod files. Default: 'modules.txt'.
 %                     The .mod files listed must exist in the Matlab path.
 %  loopFile           Text file specifying the MR scan loop. Default: 'scanloop.txt'
@@ -16,30 +18,36 @@ function seq = ge2seq(toppeTarFile, varargin)
 %  systemGE           struct specifying GE system specs, see +toppe/systemspecs.m
 %
 % Examples:
-%  >> ge2seq('TOPPEseq.tar');
-%
+%  >> pulsegeq.ge2seq('cal.tar', 'seqFile', 'cal.seq');
 %  >> lims = mr.opts('MaxGrad', 32, 'GradUnit', 'mT/m',...
 %                    'MaxSlew', 130, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
 %                    'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
 %  >> sys = systemspecs('maxSlew', 130, 'slewUnit', 'T/m/s');
-%  >> ge2seq('TOPPEseq.tar', 'system', lims, 'systemGE', sys);
+%  >> ge2seq('cal.tar', 'system', lims, 'systemGE', sys);
 %
 
+import pulsegeq.*
 
 %% Parse inputs and set system values
 % defaults
-arg.seqfile        = 'out.seq';
+arg.seqFile        = 'out.seq';
+arg.FOV            = [];
+arg.name           = 'from_ge2seq';
 arg.debug          = false;
 arg.debugAdc       = false;
 arg.moduleListFile = 'modules.txt';
 arg.loopFile       = 'scanloop.txt';
-
-arg.system = mr.opts('MaxGrad', 32, 'GradUnit', 'mT/m',...
-                     'MaxSlew', 130, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
-                     'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
-
 arg.systemGE = toppe.systemspecs('addDelays', false);   % don't add delays before creating Pulseq blocks
-%arg.systemGE = toppe.systemspecs(); 
+
+arg.system = mr.opts('rfRasterTime', 1e-6, 'gradRasterTime', 10e-6, ...
+                     'rfDeadTime', 100e-6, 'rfRingdownTime', 20e-6, ...
+                     'adcDeadTime', 20e-6, ...
+                     'maxGrad', 80, 'GradUnit', 'mT/m',...
+                     'maxSlew', 200, 'SlewUnit', 'T/m/s');
+
+%arg.system = mr.opts('maxGrad', 40, 'GradUnit', 'mT/m',...
+%                     'maxSlew', 150, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
+%                     'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
 
 % Substitute varargin values as appropriate
 arg = toppe.utils.vararg_pair(arg, varargin);
@@ -57,9 +65,6 @@ arg.system.toppe.daqdel     = round(arg.systemSiemens.adcDeadTime*1e6);      % A
 arg.system.toppe.timetrwait = round(arg.systemSiemens.rfRingdownTime*1e6);   % (us)
 end
 
-% initialize Pulseq sequence object
-seq = mr.Sequence(lims);
-
 % Untar files
 try
 	system(sprintf('tar xf %s', toppeTarFile));
@@ -69,23 +74,24 @@ catch ME
 end
 
 % Read TOPPE scan info
-geRasterTime = arg.systemGE.raster;     % GE raster time (for RF, gradients, and ADC) (sec)
 max_pg_iamp  = 2^15-2;                  % max TOPPE/GE "instruction amplitude" (signed short int)
 d      = toppe.utils.tryread(@toppe.readloop,           arg.loopFile);         % scanloop array
 modArr = toppe.utils.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   % module waveforms
 
-% clean up TOPPE files
-system('rm modules.txt scanloop.txt');
-for ic = 1:length(modArr)
-	system(sprintf('rm %s', modArr{ic}.fname));
-end
-
 
 %% Loop through scanloop.txt. Add each row as one Pulseq "block".
+
+% initialize Pulseq sequence object
+seq = mr.Sequence(lims);
+
+raster = arg.systemGE.raster;  % 4e-6 s
+
 nt = size(d,1);    % number of startseq calls
 for ii = 1:nt
-	if ~mod(ii,250)
-		fprintf('.');
+
+	if ~mod(ii,100)
+		for ib=1:60; fprintf('\b'); end;
+		fprintf('Parsing scan loop: %d of %d', ii, nt);
 	end
 
 	module = modArr{d(ii,1)};
@@ -95,22 +101,24 @@ for ii = 1:nt
 	[~, ~, ~, ~, rfwav, gxwav, gywav, gzwav, tdelay] = toppe.plotseq(ii, ii, ...
 		'loopArr', d, 'mods', modArr, 'doDisplay', false, 'system', arg.systemGE);  
 
+	% padding around adc blocks (added as block.delay)
+	adcPad = mr.makeDelay(roundtoraster(10*lims.adcDeadTime, lims.gradRasterTime)); % delay needs to be in multiples of raster times
+
 	% pulseq likes row vectors
 	rfwav = rfwav(:)';
 	gxwav = gxwav(:)';
 	gywav = gywav(:)';
 	gzwav = gzwav(:)';
 
-	% convert to Pulseq units and rastertimes
-	% rf:   Hz,   1us
-   % grad: Hz/m, 10us
-	rfwavPulseq = rf2pulseq(rfwav,geRasterTime,seq);
-	gxwavPulseq = g2pulseq( gxwav,geRasterTime,seq);
-	gywavPulseq = g2pulseq( gywav,geRasterTime,seq);
-	gzwavPulseq = g2pulseq( gzwav,geRasterTime,seq);
+	% convert to Pulseq units
+	% rf:   Hz
+   % grad: Hz/m
+	rfwavPulseq = rf2pulseq(rfwav,raster,seq);
+	gxwavPulseq = g2pulseq( gxwav,raster,seq);
+	gywavPulseq = g2pulseq( gywav,raster,seq);
+	gzwavPulseq = g2pulseq( gzwav,raster,seq);
 
 	% ensure equal duration (interpolation to Pulseq rastertimes can result in unequal duration)
-	% not needed?
 	trf   = length(rfwavPulseq) * seq.rfRasterTime;
 	tgrad = length(gxwavPulseq) * seq.gradRasterTime;
 	ngradextra = ceil((trf-tgrad)/seq.gradRasterTime);
@@ -136,45 +144,48 @@ for ii = 1:nt
 	if ~all(gzwavPulseq == 0)
 		hasg = bitset(hasg,3);
 	end
-	strArg = getArgStr(hasg);        % 'gz' or 'gx,gy,gz' or... as appropriate
+	strArg = getStrArg(hasg);        % 'gz' or 'gx,gy,gz' or... as appropriate
 
 	freqOffset  = d(ii,15);                         % Hz
 
 	if module.hasRF
-		phaseOffset = d(ii,12)/max_pg_iamp*pi;          % radians
-		flip = pi; % d(ii,2)/max_pg_iamp*pi;
+		phaseOffset = 0;   % NB! RF phase has already been applied in plotseq. % d(ii,12)/max_pg_iamp*pi;  % radians
+		flip = module.paramsfloat(16)/180*pi;   %  assumes that flip angle is stored in .mod file header
 
 		rf = mr.makeArbitraryRf(rfwavPulseq, flip, 'FreqOffset', freqOffset, ...
-			'PhaseOffset', phaseOffset, 'system', lims);
+			'PhaseOffset', phaseOffset, 'system', lims, 'delay', lims.rfDeadTime + 10e-6); % seq.testReport says that delay should be > rfDeadTime
+
+		gx.delay = lims.rfDeadTime + 10e-6;
+		gy.delay = lims.rfDeadTime + 10e-6;
+		gz.delay = lims.rfDeadTime + 10e-6;
 
 		if isempty(strArg)
-			seq.addBlock(rf);
+			seq.addBlock(rf); %, adcPad);
 		else
-			eval( sprintf( 'seq.addBlock(rf, %s)', strArg) );
+			eval( sprintf( 'seq.addBlock(rf, %s, adcPad)', strArg) ); % TODO: remove adcPad
 		end
-
 		if arg.debug
 			clf;
 			subplot(221); plot(abs(rf.signal),'r'); title(sprintf('max = %f', max(abs(rf.signal)))); ylabel('Hz');
 			subplot(222); plot(angle(rf.signal),'r');  title(sprintf('max = %f', max(angle(rf.signal)))); ylabel('rad');
 		end
 	elseif module.hasDAQ
+		% drop first and last nDrop samples so it passes mr.checkTiming
+		nDrop = 40;
+		nAdc = numel(gxwav) - 2*nDrop;
 		phaseOffset = d(ii,13)/max_pg_iamp*pi;          % radians
-		if arg.debugAdc
-			% delay and shorten adc window
-			nadc = 2*round(numel(gx.waveform)/4);
-			delay = round(nadc/4)*seq.gradRasterTime;
-			adc = mr.makeAdc(nadc, lims, 'Dwell', seq.gradRasterTime, 'delay', delay, ...
-				'freqOffset', freqOffset, 'phaseOffset', phaseOffset);
-		else
-			adc = mr.makeAdc(numel(gx.waveform), lims, 'Dwell', seq.gradRasterTime, 'delay', 0,...
-				'freqOffset', freqOffset, 'phaseOffset', phaseOffset);
-		end
+		adc = mr.makeAdc(nAdc, 'system', lims, 'Dwell', raster, 'delay', nDrop*raster, ...
+			'freqOffset', freqOffset, 'phaseOffset', phaseOffset);
+
+		% an attempt at getting the gradients and ADC to line up in seq.plot
+		gx.delay = lims.adcDeadTime;
+		gy.delay = lims.adcDeadTime;
+		gz.delay = lims.adcDeadTime;
 
 		if isempty(strArg)
-			seq.addBlock(adc);
+			seq.addBlock(adc, adcPad);
 		else
-			eval( sprintf( 'seq.addBlock(%s, adc)', strArg) );
+			eval( sprintf( 'seq.addBlock(%s, adc, adcPad)', strArg) );
 		end
 	else
 		if ~isempty(strArg)
@@ -205,23 +216,39 @@ for ii = 1:nt
 		input('press any key to continue');
 	end
 
-	% add delay block
-	if tdelay > 12;    % minimum duration of wait pulse in TOPPE
-		del = mr.makeDelay(round(tdelay*1e-6,5)); %delay also needs to be in multiples of rastertimes of 10us
-		seq.addBlock(del);
-	end
-	
+	% add delay block to approximate gap between modules in TOPPE (TODO: make this more exact)
+	tdelay = tdelay + 200;  % us
+	del = mr.makeDelay(roundtoraster(tdelay*1e-6, lims.gradRasterTime)); % delay also needs to be in multiples of raster times
+	seq.addBlock(del);
 end
 fprintf('\n');
 
-%seq.plot();
-seq.write(arg.seqfile);
+
+%% Check sequence timing and write to file
+fprintf('Checking Pulseq timing... ');
+[ok, error_report]=seq.checkTiming;
+if (ok)
+	if ~isempty(arg.FOV)
+		seq.setDefinition('FOV', arg.FOV);
+	end
+	seq.setDefinition('Name', arg.name);
+	seq.write(arg.seqFile);
+	fprintf('Timing check passed successfully\n');
+else
+	fprintf('Timing check failed! Error listing follows:\n');
+	fprintf([error_report{:}]);
+	fprintf('\n');
+end
+
+%rep = seq.testReport;
+%fprintf([rep{:}]); 
 
 return;
 
 
-%% get gradient arguments (as string) to pass to seq.addBlock()
-function argStr = getArgStr(hasg)
+
+%% helper function: get gradient arguments (as string) to pass to seq.addBlock()
+function argStr = getStrArg(hasg)
 
 switch hasg
 	case 0

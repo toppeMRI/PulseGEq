@@ -20,6 +20,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %   debug             boolean       Display detailed info about progress (default: false)
 %   pulseqVersion     string        'v1.3.0' (default) or 'v1.2.1'
 %   tarFile           string        default: 'toppeScanFiles.tar'
+%   blockStop         int           end at this block in the .seq file (for testing)
 %
 % Usage examples:
 %   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
@@ -38,11 +39,13 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %% parse inputs
 % Defaults
 arg.system  = toppe.systemspecs();
-arg.toppeVersion = 'v2';
+arg.toppeVersion = 'v3';
 arg.verbose = false;
 arg.debug = false;
-arg.pulseqVersion = 'v1.3.0';
+arg.pulseqVersion = 'v1.3.1';
 arg.tarFile = 'toppeScanFiles.tar';
+arg.blockStop = [];
+arg.ibstart = 1;
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -67,6 +70,8 @@ switch arg.pulseqVersion
 		nEvents = 6;   % number of events per block (number of columns in .seq file)
 	case 'v1.3.0'
 		nEvents = 7;
+	case 'v1.3.1'
+		nEvents = 7;
 	otherwise
 		error(sprintf('Pulseq version %s is not supported', arg.pulseqVersion));
 end
@@ -89,6 +94,7 @@ end
 % and fill 'moduleArr' struct array accordingly. 
 % Each entry of 'moduleArr' is a struct containing all waveforms belonging to one module (.mod file), and other module info.
 % The usage of the word "module" here is consistent with its usage in TOPPE.
+% For now, ignore 'EXT' blocks (TODO)
 
 % 'loopStructArr' struct array
 % Each entry in this array contains information needed to fill out one row of scanloop.txt.
@@ -101,17 +107,20 @@ end
 blockEvents = cell2mat(seq.blockEvents);
 blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; % hardcoded for as long as Pulseq does not include another element
 
+if ~isempty(arg.blockStop)
+	blockEvents = blockEvents(1:arg.blockStop, :);
+end
+
 % First entry in 'moduleArr' struct array
-ib = 1;
-block = seq.getBlock(ib);
+block = seq.getBlock(arg.ibstart);
 if ~isempty(block.delay)
 	error('First block can''t contain a delay. Edit the .seq file.');
 end
-moduleArr(ib) = pulsegeq.sub_block2module(block, ib, arg.system, 1);
+moduleArr(1) = pulsegeq.sub_block2module(block, arg.ibstart, arg.system, 1);
 
 % First entry in 'loopStructArr' struct array (first block is by definition a module)
-nextblock = seq.getBlock(ib+1);   % needed to set 'textra' in scanloop.txt
-loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, 'mod', ib);
+nextblock = seq.getBlock(arg.ibstart+1);   % needed to set 'textra' in scanloop.txt
+loopStructArr(1) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, 'mod', 1);
 
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
 sl = 1;
@@ -119,21 +128,32 @@ view = 1;
 echo = 0; 
 adcCount = 0;
 
-for ib = 2:length(seq.blockEvents)
+% h = waitbar(0,'Looping through blocks and looking for uniqueness...');
+for ib = (arg.ibstart+1):size(blockEvents,1)
 	if ~mod(ib, 500)
-		fprintf('.');
+	%	waitbar(ib/size(blockEvents,1),h)
+		for inb = 1:20
+			fprintf('\b');
+ 		end
+		fprintf('Block %d/%d', ib, size(blockEvents, 1));
 	end
 
 	block = seq.getBlock(ib);
 
-	if ib < length(seq.blockEvents)
-		nextblock = seq.getBlock(ib+1);  % used to set textra column in scanloop.txt
+	% get the next block, used to set textra column in scanloop.txt
+	if ib < size(blockEvents,1)
+		nextblock = seq.getBlock(ib+1);  
 	else
 		nextblock = [];
 	end
+	if isfield(nextblock, 'trig') 
+		nextblock = [];
+	end
 
-	if ~isempty(block.delay) & isempty(block.rf) & isempty(block.adc) ...
-		& isempty(block.gx) & isempty(block.gy) & isempty(block.gz)
+	%if ~isempty(block.delay) & isempty(block.rf) & isempty(block.adc) ...
+	if isempty(block.rf) & isempty(block.adc) ...
+		& isempty(block.gx) & isempty(block.gy) & isempty(block.gz) ...
+		| isfield(block, 'trig')  % ignore trigger (ext) blocks for now. TODO
 		continue;  % Done, move on to next block 
 		% Pure delay blocks are accounted for in 'textra' in the previous row in scanloop.txt)
 	end
@@ -223,7 +243,7 @@ for ib = 2:length(seq.blockEvents)
 	else
 		% Found a new set of shapes, so add this waveform set to moduleArr(ic)
 		moduleArr(ic) = pulsegeq.sub_updatemodule(moduleArr(ic), block, ib, arg.system);
-		loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...  %'mod', ic);
+		loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ... 
 			'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', moduleArr(ic).npulses);
 	end
 
@@ -257,7 +277,7 @@ end
 
 %% First, write each module to a .mod file
 if arg.verbose
-	fprintf(1, 'Writing .mod files and modules.txt... ');
+	fprintf(1, 'Writing .mod files and modules.txt...\n');
 end
 
 % write modules.txt header
@@ -324,11 +344,6 @@ for ic = 1:length(moduleArr)
 
 	if arg.verbose
 		fprintf('Creating .mod file number %d...\n', ic);
-	end
-
-	% force rf waveform to be non-empty to avoid error in writemod (does no harm; will not be played out)
-	if isempty(rf) 
-		%rf = 0.001*ones(moduleArr(ic).nt, 1);
 	end
 
 	% make sure waveforms start and end at zero, and are on a 4-sample boundary (toppe.writemod requires this)

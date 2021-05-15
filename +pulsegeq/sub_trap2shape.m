@@ -1,4 +1,4 @@
-function wav = sub_trap2shape(grad, gamma)
+function wav = sub_trap2shape(grad, gamma, raster)
 % Convert trapezoid to (positive) shape on 4us sample boundary
 % Increase rise/fall times by one sample to keep within slew limit (due to 4us sampling)
 %
@@ -9,9 +9,13 @@ function wav = sub_trap2shape(grad, gamma)
 %  gamma = toppe.systemspecs().gamma;
 %  wav = sub_trap2shape(trap, gamma);
 
-dt = 4e-6;   % sec
+if nargin < 3
+	raster = 4e-6;   % sec
+end
+
+dt = raster;
 gamp = abs(grad.amplitude)/100/gamma;                % Gauss/cm
-wav = [ linspace(0, gamp, ceil(grad.riseTime/dt)+1)  ...
+wav = [ linspace(0, 0, ceil(grad.delay/dt)) linspace(0, gamp, ceil(grad.riseTime/dt)+1)  ...
 		gamp*ones(1, floor(grad.flatTime/dt)) ... 
 		linspace(gamp, 0, ceil(grad.fallTime/dt)+1) ]';
 

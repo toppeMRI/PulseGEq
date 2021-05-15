@@ -6,7 +6,8 @@ Pulseq files can be created in a number of ways, e.g., using the Pulseq Matlab p
 [JEMRIS](http://jemris.org/) 
 (additional [notes](JEMRIS.md)).
 
-The code in this repository converts a Pulseq (.seq) file to a set of files that can be executed on GE scanners.
+The code in this repository converts a Pulseq (.seq) file to a set of files that can be executed on GE scanners (`seq2ge.m`).  
+The reverse is also possible: convert a set of "TOPPE" files to the Pulseq file format (`ge2seq.m`).
 
 
 ## DEPENDENCIES

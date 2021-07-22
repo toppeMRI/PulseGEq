@@ -165,7 +165,9 @@ for ii = 1:nt
             seq.addBlock(rf); %, adcPad);
         else
             eval( sprintf( 'seq.addBlock(rf, %s, adcPad)', strArg) ); % TODO: remove adcPad
+            %eval( sprintf( 'seq.addBlock(rf, %s)', strArg) ); % TODO: remove adcPad
         end
+
         if arg.debug
             clf;
             subplot(221); plot(abs(rf.signal),'r'); title(sprintf('max = %f', max(abs(rf.signal)))); ylabel('Hz');

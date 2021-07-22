@@ -1,5 +1,5 @@
-%% Storage for groups of arbitrary gradients and rf signals
 function module = sub_block2module(block, blockid, system, modnum)
+%% Storage for groups of arbitrary gradients and rf signals
 %
 % Initialize a module with waveforms from 'block'
 %

@@ -52,20 +52,20 @@ for ax = {'gx','gy','gz'};
     if ~isempty(grad)
         if strcmp(grad.type, 'grad')    % arbitrary shape
             % must start and end on zero
-            grad.raster = grad.t(2) - grad.t(1);
+            grad.raster = grad.tt(2) - grad.tt(1);
             if abs(grad.waveform(1)) > 0
                 grad.waveform = [0; grad.waveform];
-                grad.t = [grad.raster/2; (grad.t + grad.raster)];
+                grad.tt = [grad.raster/2; (grad.tt + grad.raster)];
             end
             if abs(grad.waveform(end)) > 0
                 grad.waveform = [grad.waveform; 0];
-                grad.t = [grad.t; (grad.t(end) + grad.raster)];
+                grad.tt = [grad.tt; (grad.tt(end) + grad.raster)];
             end
 
             % interpolate to GE raster time
             % TODO: shift by dt/2?
-            tge = 0:dt:(max(grad.t)-0*dt);
-            wav = interp1(grad.t, grad.waveform, tge);   % interpolate to GE raster time (4us)
+            tge = 0:dt:(max(grad.tt)-0*dt);
+            wav = interp1(grad.tt, grad.waveform, tge);   % interpolate to GE raster time (4us)
             wav(isnan(wav)) = 0;                         % must be due to interp1
             if wav(1) > 0
                 wav = [0; wav(:)];

@@ -39,7 +39,7 @@ arg = toppe.utils.vararg_pair(arg, varargin);
 if ~isempty(block)
 
     % determine start_core
-    if ~isempty(block.rf)
+    if ~isempty(block.rf) 
         start_core = system.toppe.start_core_rf;    % RF module
     elseif ~isempty(block.adc) 
         start_core = system.toppe.start_core_daq;   % data acquisition module

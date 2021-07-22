@@ -179,8 +179,8 @@ for ii = 1:nt
         adc = mr.makeAdc(nAdc, 'system', lims, 'Dwell', raster, 'delay', nDrop*raster, ...
             'freqOffset', freqOffset, 'phaseOffset', phaseOffset);
 
-        % delay gradients so they line up with adc window
-        gx.delay = lims.adcDeadTime;  % add nDrop*raster? TODO
+        % delay gradients so they line up with adc window (not quite sure here)
+        gx.delay = lims.adcDeadTime;
         gy.delay = lims.adcDeadTime;
         gz.delay = lims.adcDeadTime;
 

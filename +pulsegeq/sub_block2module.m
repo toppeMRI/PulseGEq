@@ -20,7 +20,6 @@ function module = sub_block2module(block, blockid, system, modnum)
 %                   .ofname          .mod output file name
 %                   .nt              max number of samples in waveforms 
 %                   .npulses         number of different sets of waveforms (e.g., size(gx.waveforms,2))
-%                   .block           Pulseq block
 
 import pulsegeq.*
 

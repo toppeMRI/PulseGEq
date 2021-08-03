@@ -1,6 +1,8 @@
 %% Update/initialize loopStructArr 
 function arg = sub_updateloopstruct(arg, block, nextblock, system, varargin)
 %
+% Fill struct containing entries for one row in scanloop.txt 
+%
 % Inputs
 %  arg          Either [] (empty), or a loopStruct struct (see below)
 %  block        Pulseq block (getBlock()). Can be empty.
@@ -37,17 +39,24 @@ arg = toppe.utils.vararg_pair(arg, varargin);
 
 % If block is provided, fill in values as appropriate
 if ~isempty(block)
-
-    % determine start_core
+    % Determine textra. See UserGuide/figs/timing.svg
     if ~isempty(block.rf) 
-        start_core = system.toppe.start_core_rf;    % RF module
+        start_core = system.toppe.start_core_rf;    % Earliest start of waveform (us).
+        delpre = system.toppe.myrfdel;   % Gradient delay w.r.t. RF waveform (us)
     elseif ~isempty(block.adc) 
         start_core = system.toppe.start_core_daq;   % data acquisition module
+        delpre = system.toppe.daqdel; % Gradient delay w.r.t. ADC window (us)
     else
-        start_core = system.toppe.start_core_grad;  % module containing only gradients (no RF or DAQ)
+        start_core = system.toppe.start_core_grad;  % only gradients
+        delpre = 0;
     end
+    timetrwait = system.toppe.timetrwait;  % us. Minimum delay before ssi time.
+    timessi = system.toppe.timessi;
+    tmp = pulsegeq.sub_block2module(block, 1, system, 1);
+    wavdur = tmp.nt*system.raster;  % waveform duration (s)
+    arg.textra = max(0, block.blockDuration - wavdur - (start_core + delpre + timetrwait + timessi)*1e-6);   % s
 
-    % if next block is a delay block, set textra accordingly
+    % if next block is a delay block, add duration to textra
     if ~isempty(nextblock) 
         if isempty(nextblock.rf) & isempty(nextblock.adc) & ...
             isempty(nextblock.gx) & isempty(nextblock.gy) & isempty(nextblock.gz)
@@ -73,7 +82,8 @@ if ~isempty(block)
         grad = block.(ax);
         if ~isempty(grad)
             if strcmp(grad.type,'trap')
-                eval( sprintf('arg.%samp = (block.%s.amplitude)/system.gamma/100;', ax, ax) );        % Gauss/cm. signed. (in moduleArr, traps are normalized and positive)
+                % Gauss/cm, signed (in moduleArr, traps are normalized and positive)
+                eval( sprintf('arg.%samp = (block.%s.amplitude)/system.gamma/100;', ax, ax) );   
             else
                 eval( sprintf('wav = block.%s.waveform/system.gamma/100;', ax) );    % Gauss/cm
                 wmax = max(abs(wav));

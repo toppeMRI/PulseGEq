@@ -1,8 +1,5 @@
 % set system limits (slew rate 130 and max_grad 30 work on Prisma)
 sys = mr.opts('MaxGrad', 24, 'GradUnit', 'mT/m', ...
-    'MaxSlew', 150, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 10e-6, ...
-    'rfDeadTime', 100e-6, 'adcDeadTime', 10e-6);
-sysInv = mr.opts('MaxGrad', 24, 'GradUnit', 'mT/m', ...
     'MaxSlew', 100, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 10e-6, ...
     'rfDeadTime', 100e-6, 'adcDeadTime', 10e-6);
 
@@ -10,9 +7,11 @@ seq=mr.Sequence(sys);           % Create a new sequence object
 fov=[192 240 256]*1e-3;         % Define FOV and resolution
 N = [192 240 256];               % matrix sizes
 alpha=7;                        % flip angle
-%ro_dur=5120e-6;                 % RO duration
-ro_dur=5017.6e-6; % BW=200Hz/pix
-ro_os=2;                        % readout oversampling
+%ro_dur=5017.6e-6; % BW=200Hz/pix
+load GE   % see bw.m
+ro_dur = GE.ro_dur;
+%ro_os=2;                        % readout oversampling
+ro_os = GE.decimation;
 ro_spoil=3;                     % additional k-max excursion for RO spoiling
 TI=1.1;
 TRout=2.5;

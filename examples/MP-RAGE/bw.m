@@ -23,6 +23,9 @@ bwpp = 2*oprbw/nx*1e3;   % Hz
 GE.raster = 4e-6;   % (s) ADC dwell time, gradient/RF raster, are all the same
 GE.decimation = 125/oprbw;  % readout oversampling factor
 GE.ro_dur = GE.raster * nx * GE.decimation;
+GE.fov = fov;
+GE.nx = nx;
+GE.oprbw = oprbw;
 
 fprintf('GE readout parameters:\n   raster = %.3e s; ro_dur = %.3e; nsamples = %d;\n   grad amp = %.6f G/cm, bw/pix = %.3f Hz\n', ...
     GE.raster, GE.ro_dur, nx * GE.decimation, gx(1), bwpp);

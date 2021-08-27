@@ -5,7 +5,7 @@ fov = 25.6;  % cm
 nx = 256;
 
 % 'oprbw' control variable (CV); bandwidth/fov is 2*oprbw (kHz)
-oprbw = 125/4;
+oprbw = 125/5;
 
 % design readout gradient
 tmp = 1;  % z resolution (cm) (dummy)

@@ -13,7 +13,7 @@ ro_dur = GE.ro_dur;
 %ro_os=2;                        % readout oversampling
 ro_os = GE.decimation;
 ro_spoil = 3;                    % additional k-max excursion for RO spoiling
-TI=1.1;
+TI = 1.1;
 TRout=2.5;
 % TE & TR in the inner loop are as short as possible derived from the above parameters and the system specs
 % more in-depth parameters
@@ -28,8 +28,8 @@ ax.n2=strfind('xyz',ax.d2);
 ax.n3=strfind('xyz',ax.d3);
 
 % Create alpha-degree hard pulse and gradient
-rf = mr.makeBlockPulse(alpha*pi/180,sys,'Duration',rfLen);
-rf180 = mr.makeAdiabaticPulse('hypsec',sys,'Duration',10.24e-3,'dwell',1e-5);
+rf = mr.makeBlockPulse(alpha*pi/180, sys, 'Duration',rfLen);
+rf180 = mr.makeAdiabaticPulse('hypsec', sys, 'Duration', 10.24e-3, 'dwell',1e-5);
 
 % write alpha pulse to tipdown.mod for TOPPE (to avoid rfDeadTime)
 gamma = 4.2576e3;     % Hz/Gauss
@@ -67,25 +67,27 @@ gslSp = mr.makeTrapezoid(ax.d3, ...
 [gro1,groSp]=mr.splitGradientAt(gro,gro.riseTime+gro.flatTime);
 % gradient spoiling
 if ro_spoil>0
-    groSp=mr.makeExtendedTrapezoidArea(gro.channel,gro.amplitude,0,deltak(ax.n1)/2*N(ax.n1)*ro_spoil,sys);
+    groSp = mr.makeExtendedTrapezoidArea(gro.channel, gro.amplitude, 0, deltak(ax.n1)/2*N(ax.n1)*ro_spoil, sys);
 end
 
 % calculate timing of the fast loop 
 % we will have two blocks in the inner loop:
 % 1: RF 
 % 2: prewinder,phase enconding + readout + spoilers/rewinders
-[groPre]=mr.align('right',groPre,mr.makeDelay(mr.calcDuration(gpe1,gpe2)-gro.riseTime));
-gro1.delay=mr.calcDuration(groPre);
-groSp.delay=mr.calcDuration(gro1);
-adc.delay=gro1.delay+gro.riseTime;
-gro1=mr.addGradients({gro1,groPre,groSp},'system',sys);
-gpe1c=mr.addGradients({gpe1,mr.makeTrapezoid(ax.d2,'Area',-gpe1.area,'duration',groSp.shape_dur,'delay',groSp.delay,'system',sys)});
-gpe2c=mr.addGradients({gpe2,mr.makeTrapezoid(ax.d3,'Area',-gpe2.area,'duration',groSp.shape_dur,'delay',groSp.delay,'system',sys)});
-TRinner=mr.calcDuration(rf)+mr.calcDuration(gro1); % we'll need it for the TI delay
+[groPre] = mr.align('right',groPre,mr.makeDelay(mr.calcDuration(gpe1,gpe2)-gro.riseTime));
+gro1.delay = mr.calcDuration(groPre);
+groSp.delay = mr.calcDuration(gro1);
+adc.delay = gro1.delay+gro.riseTime;
+gro1 = mr.addGradients({gro1,groPre,groSp},'system',sys);
+gpe1c = mr.addGradients({gpe1, ...
+    mr.makeTrapezoid(ax.d2, 'Area', -gpe1.area, 'duration', groSp.shape_dur, 'delay', groSp.delay, 'system',sys)});
+gpe2c = mr.addGradients({gpe2, ...
+    mr.makeTrapezoid(ax.d3, 'Area', -gpe2.area, 'duration', groSp.shape_dur, 'delay', groSp.delay, 'system',sys)});
+TRinner = mr.calcDuration(rf)+mr.calcDuration(gro1); % we'll need it for the TI delay
 
 % peSteps -- control reordering
-pe1Steps=((0:N(ax.n2)-1)-N(ax.n2)/2)/N(ax.n2)*2;
-pe2Steps=((0:N(ax.n3)-1)-N(ax.n3)/2)/N(ax.n3)*2;
+pe1Steps = ((0:N(ax.n2)-1)-N(ax.n2)/2)/N(ax.n2)*2;
+pe2Steps = ((0:N(ax.n3)-1)-N(ax.n3)/2)/N(ax.n3)*2;
 
 % TI calc
 TIdelay=round((TI-(find(pe1Steps==0)-1)*TRinner-(mr.calcDuration(rf180)-mr.calcRfCenter(rf180)-rf180.delay)-rf.delay-mr.calcRfCenter(rf))/sys.blockDurationRaster)*sys.blockDurationRaster;
@@ -99,8 +101,16 @@ gro1.id=seq.registerGradEvent(gro1);
 [~, rf.shapeIDs]=seq.registerRfEvent(rf); % the phase of the RF object will change, therefore we only per-register the shapes 
 [rf180.id, rf180.shapeIDs]=seq.registerRfEvent(rf180); % 
 
+% define GRAPPA undersampling pattern along slowest dimension (outer pe loop)
+nACS = 20;  % number of auto-calibration lines (dense sampling in center)
+R = 2;      % undersampling outside ACS region
+S = 0*(1:N(ax.n3));
+S(1:R:end) = 1;
+S( (end/2-nACS/2):(end/2+nACS/2-1) ) = 1;
+J = find(S == 1);
+
 % start the sequence
-for j=1:N(ax.n3)
+for j = J  % 1:N(ax.n3)
     seq.addBlock(rf180);
     seq.addBlock(mr.makeDelay(TIdelay),gslSp);
     rf_phase=0;

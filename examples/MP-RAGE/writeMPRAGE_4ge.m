@@ -27,17 +27,11 @@ ax.n1=strfind('xyz',ax.d1);
 ax.n2=strfind('xyz',ax.d2);
 ax.n3=strfind('xyz',ax.d3);
 
-% Create alpha-degree hard pulse and gradient
+% Create alpha-degree hard pulse 
 rf = mr.makeBlockPulse(alpha*pi/180, sys, 'Duration',rfLen);
-rf180 = mr.makeAdiabaticPulse('hypsec', sys, 'Duration', 10.24e-3, 'dwell',1e-5);
 
-% write alpha pulse to tipdown.mod for TOPPE (to avoid rfDeadTime)
-gamma = 4.2576e3;     % Hz/Gauss
-GE.rf.n = 10;         % number of RF samples (will be padded with zeros + 4-sample boundary below)
-GE.rf.dur = GE.rf.n*GE.raster; 
-GE.rf.signal = [0; (alpha/360) / (gamma * GE.rf.dur) * ones(GE.rf.n,1); 0]; % must start and end with zeros
-GE.rf.signal = toppe.utils.makeGElength(GE.rf.signal);  % enforce 4-sample boundary
-toppe.writemod('rf', GE.rf.signal, 'ofname', 'tipdown.mod');
+% Create adiabatic inversion pulse
+rf180 = mr.makeAdiabaticPulse('hypsec', sys, 'Duration', 10.24e-3, 'dwell',1e-5);
 
 % Define other gradients and ADC events
 deltak=1./fov;
@@ -101,6 +95,65 @@ gro1.id=seq.registerGradEvent(gro1);
 [~, rf.shapeIDs]=seq.registerRfEvent(rf); % the phase of the RF object will change, therefore we only per-register the shapes 
 [rf180.id, rf180.shapeIDs]=seq.registerRfEvent(rf180); % 
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Create .mod files and modules.txt needed for execution on GE scanners
+
+% set system specs
+GE.sys = toppe.systemspecs('maxSlew', 15, 'slewUnit', 'Gauss/cm/ms', ...  % <= scanner limit
+    'maxGrad', 7, 'gradUnit', 'Gauss/cm', ...  % maxGrad *MUST* match the physical scanner spec 
+    'maxRf', 0.25, 'rfUnit', 'Gauss'); % <= scanner limit
+
+% set TOPPE low-level system timing variables (scanner specific; times are in us)
+% overrides defaults
+GE.sys.toppe.version = 'v3';
+GE.sys.toppe.start_core_daq = 60;
+GE.sys.toppe.myrfdel = 148;
+GE.sys.toppe.daqdel = 156;
+GE.sys.toppe.timetrwait = 64;
+GE.sys.timessi = 100;
+
+% write inversion pulse to inversion.mod for TOPPE
+GE.rf180.signal = [0; rf180.signal(:)/gamma; 0];  % Gauss
+GE.rf180.signal = toppe.utils.makeGElength(GE.rf180.signal);  % enforce 4-sample boundary
+toppe.writemod('rf', GE.rf180.signal, 'ofname', 'inversion.mod');
+
+% write alpha pulse to tipdown.mod for TOPPE
+gamma = 4.2576e3;     % Hz/Gauss
+GE.rf.n = 10;         % number of RF samples (will be padded with zeros below)
+GE.rf.dur = GE.rf.n*GE.raster; 
+GE.rf.signal = [0; (alpha/360) / (gamma * GE.rf.dur) * ones(GE.rf.n,1); 0]; % must start and end with zeros
+GE.rf.signal = toppe.utils.makeGElength(GE.rf.signal);  % enforce 4-sample boundary
+toppe.writemod('rf', GE.rf.signal, 'ofname', 'tipdown.mod');
+
+% create readout.mod for TOPPE
+ofname = 'readout.mod';
+tmp = 1;  % z resolution (cm) (is a dummy variable here)
+toppe.utils.makegre(fov(1)*100, N(ax.n1), tmp, ...
+    'oprbw', GE.oprbw, ...
+    'ncycles', 2, ...    % number of cycles of spoiling along readout (x)
+    'system', GE.sys, ...
+    'ofname', ofname);
+
+% create modules.txt file for TOPPE
+% If placing in a folder other than /usr/g/bin/,
+% you must provide the full filename path.
+modFileText = ['' ...
+'Total number of unique cores\n' ...
+'4\n' ...
+'fname  duration(us)    hasRF?  hasDAQ?\n' ...
+'inversion.mod 0   1   0\n' ...     % Entries are tab-separated   
+'spoil.mod 0   0   0\n' ...
+'tipdown.mod 0   1   0\n' ...
+'readout.mod 0   0   1' ];
+fid = fopen('modules.txt', 'wt');
+fprintf(fid, modFileText);
+fclose(fid);
+
+%% done creating .mod files and modules.txt for TOPPE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 % define GRAPPA undersampling pattern along slowest dimension (outer pe loop)
 nACS = 20;  % number of auto-calibration lines (dense sampling in center)
 R = 2;      % undersampling outside ACS region
@@ -110,7 +163,10 @@ S( (end/2-nACS/2):(end/2+nACS/2-1) ) = 1;
 J = find(S == 1);
 
 % start the sequence
-for j = J  % 1:N(ax.n3)
+for i=1:N(ax.n2)  % add noise scans
+    seq.addBlock(adc);
+end
+for j = J  % 1:N(ax.n3)   % main scan loop
     seq.addBlock(rf180);
     seq.addBlock(mr.makeDelay(TIdelay),gslSp);
     rf_phase=0;

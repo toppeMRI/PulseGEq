@@ -113,12 +113,19 @@ GE.sys.toppe.daqdel = 156;
 GE.sys.toppe.timetrwait = 64;
 GE.sys.timessi = 100;
 
-% write inversion pulse to inversion.mod for TOPPE
+% write inversion pulse to inversion.mod
 GE.rf180.signal = [0; rf180.signal(:)/gamma; 0];  % Gauss
 GE.rf180.signal = toppe.utils.makeGElength(GE.rf180.signal);  % enforce 4-sample boundary
 toppe.writemod('rf', GE.rf180.signal, 'ofname', 'inversion.mod');
 
-% write alpha pulse to tipdown.mod for TOPPE
+% write spoil.mod
+GE.spoil.mxs = 5;  % Gauss/cm/ms. Lower to reduce PNS.
+res = fov(1)/N(1)*100;   % spatial resolution (cm)
+GE.spoil.nSpoilCycles = 4;
+gCrush = toppe.utils.makecrusher(GE.spoil.nSpoilCycles, res, 0, GE.spoil.mxs, GE.sys.maxGrad);
+toppe.writemod('gz', gCrush, 'ofname', 'spoil.mod', 'system', GE.sys);
+
+% write alpha pulse to tipdown.mod
 gamma = 4.2576e3;     % Hz/Gauss
 GE.rf.n = 10;         % number of RF samples (will be padded with zeros below)
 GE.rf.dur = GE.rf.n*GE.raster; 
@@ -138,7 +145,7 @@ toppe.utils.makegre(fov(1)*100, N(ax.n1), tmp, ...
 % create modules.txt file for TOPPE
 % If placing in a folder other than /usr/g/bin/,
 % you must provide the full filename path.
-modFileText = ['' ...
+GE.modFileText = ['' ...
 'Total number of unique cores\n' ...
 '4\n' ...
 'fname  duration(us)    hasRF?  hasDAQ?\n' ...
@@ -147,7 +154,7 @@ modFileText = ['' ...
 'tipdown.mod 0   1   0\n' ...
 'readout.mod 0   0   1' ];
 fid = fopen('modules.txt', 'wt');
-fprintf(fid, modFileText);
+fprintf(fid, GE.modFileText);
 fclose(fid);
 
 %% done creating .mod files and modules.txt for TOPPE
@@ -162,13 +169,31 @@ S(1:R:end) = 1;
 S( (end/2-nACS/2):(end/2+nACS/2-1) ) = 1;
 J = find(S == 1);
 
-% start the sequence
-for i=1:N(ax.n2)  % add noise scans
-    seq.addBlock(adc);
+% intialize scanloop.txt file for TOPPE
+toppe.write2loop('setup', 'version', 3);
+
+% Scan loop
+for i = 1:N(ax.n2)  % add noise scans
+    % for the .seq file
+    seq.addBlock(adc);  
+
+    % for TOPPE
+	toppe.write2loop('readout.mod', ...
+		'Gamplitude', [0.0 0 0]', ... % turn off gradients 
+		'slice', 1, 'view', i);   % GE data is stored in 'slice', 'echo', and 'view' indeces
 end
 for j = J  % 1:N(ax.n3)   % main scan loop
+    % inversion pulse, spoiler, and delay
     seq.addBlock(rf180);
     seq.addBlock(mr.makeDelay(TIdelay),gslSp);
+
+    % for TOPPE
+  	toppe.write2loop('inversion.mod', ...
+		'RFamplitude', 1.0);
+	toppe.write2loop('spoil.mod', ...
+		'Gamplitude', [SpoilAmp(:); 0], ...
+		'textra', round(TIdelay*1e6)); % approximate
+
     rf_phase=0;
     rf_inc=0;
     % pre-register the PE gradients that repeat in the inner loop
@@ -185,6 +210,8 @@ for j = J  % 1:N(ax.n3)   % main scan loop
     end
     seq.addBlock(mr.makeDelay(TRoutDelay));
 end
+toppe.write2loop('finish');   % finalize scanloop.txt
+
 fprintf('Sequence ready\n');
 
 %% check whether the timing of the sequence is correct

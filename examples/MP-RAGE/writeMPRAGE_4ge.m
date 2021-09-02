@@ -135,14 +135,15 @@ GE.rf.signal = toppe.utils.makeGElength(GE.rf.signal);  % enforce 4-sample bound
 toppe.writemod('rf', GE.rf.signal, 'ofname', 'tipdown.mod');
 
 % create readout.mod for TOPPE
-tmp = 1;  % z resolution (cm) (is a dummy variable here)
-[GE.ro.wav, GE.pe1.wav, GE.pe2.wav] = toppe.utils.makegre(fov(1)*100, N(ax.n1), tmp, ...
+GE.zres = fov(ax.n3)/N(ax.n3) * 1e2;   % cm
+[GE.ro.wav, GE.pe1.wav, GE.pe2.wav] = toppe.utils.makegre(fov(ax.n1)*1e2, N(ax.n1), GE.zres, ...
     'oprbw', GE.oprbw, ...
     'ncycles', 2, ...    % number of cycles of spoiling along readout (x)
     'system', GE.sys, ...
     'ofname', 'tmp.mod');
 toppe.writemod('gx', GE.pe2.wav, 'gy', GE.pe1.wav, 'gz', GE.ro.wav, ...
     'system', GE.sys, 'ofname', 'readout.mod');
+system('rm tmp.mod');
 
 % create modules.txt file for TOPPE
 % If placing in a folder other than /usr/g/bin/,
@@ -188,7 +189,7 @@ for j = J  % 1:N(ax.n3)
   	toppe.write2loop('inversion.mod', ...
 		'RFamplitude', 1.0);
 	toppe.write2loop('spoil.mod', ...
-		'textra', round(TIdelay*1e3)); % approximate TODO
+		'textra', round(TIdelay*1e3)); % (ms) approximate TODO
 
     rf_phase=0;
     rf_inc=0;
@@ -209,8 +210,8 @@ for j = J  % 1:N(ax.n3)
 
         % excitation and readout (for TOPPE)
         toppe.write2loop('tipdown.mod', ...
-            'RFphase', rf_phase/180*pi);
-        GE.textra = (i == N(ax.n2)) * round(TRoutDelay*1e3); % ms
+            'RFphase', rf_phase/180*pi); 
+        GE.textra = (i == N(ax.n2)) * round(TRoutDelay*1e3); % approximate TODO
         toppe.write2loop('readout.mod', ...
             'Gamplitude', [pe2Steps(j) pe1Steps(i) 1.0]', ...
             'DAQphase', rf_phase/180*pi, ...
@@ -224,7 +225,7 @@ for j = J  % 1:N(ax.n3)
 end
 
 % add noise scans for TOPPE
-% do this here since receive gain is based on signal from beginning of sequence
+% do this last since receive gain is based on signal from beginning of sequence
 % first insert ~5s pause to allow magnetization/system to settle
 toppe.write2loop('spoil.mod', ...
     'Gamplitude', [0 0 0]', ...
@@ -239,8 +240,6 @@ end
 toppe.write2loop('finish');   
 
 fprintf('Sequence ready\n');
-
-return;
 
 %% check whether the timing of the sequence is correct
 [ok, error_report]=seq.checkTiming;

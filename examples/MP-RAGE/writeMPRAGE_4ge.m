@@ -135,15 +135,20 @@ GE.rf.signal = toppe.utils.makeGElength(GE.rf.signal);  % enforce 4-sample bound
 toppe.writemod('rf', GE.rf.signal, 'ofname', 'tipdown.mod');
 
 % create readout.mod for TOPPE
+% reduce slew during design to reduce PNS
 GE.zres = fov(ax.n3)/N(ax.n3) * 1e2;   % cm
+tmp = toppe.systemspecs('maxSlew', 15, 'slewUnit', 'Gauss/cm/ms', ... 
+    'maxGrad', GE.sys.maxGrad, 'gradUnit', 'Gauss/cm');
 [GE.ro.wav, GE.pe1.wav, GE.pe2.wav] = toppe.utils.makegre(fov(ax.n1)*1e2, N(ax.n1), GE.zres, ...
     'oprbw', GE.oprbw, ...
-    'ncycles', 2, ...    % number of cycles of spoiling along readout (x)
-    'system', GE.sys, ...
+    'ncycles', ro_spoil/2 + 0.5, ...    % number of cycles of spoiling along readout (x)
+    'system', tmp, ...
     'ofname', 'tmp.mod');
 toppe.writemod('gx', GE.pe2.wav, 'gy', GE.pe1.wav, 'gz', GE.ro.wav, ...
     'system', GE.sys, 'ofname', 'readout.mod');
 system('rm tmp.mod');
+
+return;
 
 % create modules.txt file for TOPPE
 % If placing in a folder other than /usr/g/bin/,

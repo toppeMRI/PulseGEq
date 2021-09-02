@@ -216,12 +216,9 @@ for j = J  % 1:N(ax.n3)
     gpe2cj.id=seq.registerGradEvent(gpe2cj);
 
     for i=1:N(ax.n2)
+        % excitation and readout (for .seq file)
         rf.phaseOffset=rf_phase/180*pi;
         adc.phaseOffset=rf_phase/180*pi;
-        rf_inc=mod(rf_inc+rfSpoilingInc, 360.0);
-        rf_phase=mod(rf_phase+rf_inc, 360.0);
-
-        % excitation and readout (for .seq file)
         seq.addBlock(rf);
         seq.addBlock(adc,gro1,mr.scaleGrad(gpe1c,pe1Steps(i)),gpe2cj);
 
@@ -235,6 +232,9 @@ for j = J  % 1:N(ax.n3)
             'DAQphase', rf_phase/180*pi, ...
             'textra', GE.textra, ...
             'slice', GE.slice, 'view', i);  
+
+        rf_inc=mod(rf_inc+rfSpoilingInc, 360.0);
+        rf_phase=mod(rf_phase+rf_inc, 360.0);
     end
     
     GE.slice = GE.slice + 1;

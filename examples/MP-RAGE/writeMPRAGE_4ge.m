@@ -13,7 +13,7 @@ ro_dur = GE.ro_dur;
 %ro_os=2;                        % readout oversampling
 ro_os = GE.decimation;
 ro_spoil = 3;                    % additional k-max excursion for RO spoiling
-TI = 1.1;
+TI = 1.06; % to match the ABCD protocol. Was: 1.1
 TRout=2.5;
 % TE & TR in the inner loop are as short as possible derived from the above parameters and the system specs
 % more in-depth parameters
@@ -148,8 +148,6 @@ toppe.writemod('gx', GE.pe2.wav, 'gy', GE.pe1.wav, 'gz', GE.ro.wav, ...
     'system', GE.sys, 'ofname', 'readout.mod');
 system('rm tmp.mod');
 
-return;
-
 % create modules.txt file for TOPPE
 % If placing in a folder other than /usr/g/bin/,
 % you must provide the full filename path.
@@ -165,6 +163,23 @@ fid = fopen('modules.txt', 'wt');
 fprintf(fid, GE.modFileText);
 fclose(fid);
 
+% Calculate delays for TOPPE to achieve desired TI and volume TR (TRout)
+% toppe.getTRtime contructs the sequence from the TOPPE files in the
+% current directory (*.mod, modules.txt, scanloop.txt)
+toppe.write2loop('setup', 'version', 3);
+toppe.write2loop('inversion.mod');
+toppe.write2loop('spoil.mod');
+toppe.write2loop('finish');
+GE.inversion.mindur = toppe.getTRtime(1,2);  % sec
+toppe.write2loop('setup', 'version', 3);
+toppe.write2loop('tipdown.mod');
+toppe.write2loop('readout.mod');
+toppe.write2loop('finish');
+GE.inner.tr = toppe.getTRtime(1,2);   % sec
+GE.inner.dur = GE.inner.tr * N(ax.n2);
+GE.inversion.delay = TI - GE.inversion.mindur - GE.inner.dur/2; % sec
+GE.outer.delay = TRout - GE.inversion.mindur - GE.inversion.delay - GE.inner.dur;
+
 %% done creating .mod files and modules.txt for TOPPE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -174,7 +189,7 @@ nACS = 20;  % number of auto-calibration lines (dense sampling in center)
 R = 2;      % undersampling outside ACS region
 S = 0*(1:N(ax.n3));
 S(1:R:end) = 1;
-%S( (end/2-nACS/2):(end/2+nACS/2-1) ) = 1;  % TODO: uncomment
+S( (end/2-nACS/2):(end/2+nACS/2-1) ) = 1;  % TODO: uncomment
 J = find(S == 1);
 
 % intialize scanloop.txt file for TOPPE
@@ -194,7 +209,7 @@ for j = J  % 1:N(ax.n3)
   	toppe.write2loop('inversion.mod', ...
 		'RFamplitude', 1.0);
 	toppe.write2loop('spoil.mod', ...
-		'textra', round(TIdelay*1e3)); % (ms) approximate TODO
+		'textra', GE.inversion.delay*1e3); % ms
 
     rf_phase=0;
     rf_inc=0;
@@ -216,7 +231,7 @@ for j = J  % 1:N(ax.n3)
         % excitation and readout (for TOPPE)
         toppe.write2loop('tipdown.mod', ...
             'RFphase', rf_phase/180*pi); 
-        GE.textra = (i == N(ax.n2)) * round(TRoutDelay*1e3); % approximate TODO
+        GE.textra = (i == N(ax.n2)) * GE.outer.delay*1e3; % ms
         toppe.write2loop('readout.mod', ...
             'Gamplitude', [pe2Steps(j) pe1Steps(i) 1.0]', ...
             'DAQphase', rf_phase/180*pi, ...

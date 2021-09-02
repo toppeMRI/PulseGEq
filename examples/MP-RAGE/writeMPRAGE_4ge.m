@@ -196,10 +196,7 @@ J = find(S == 1);
 toppe.write2loop('setup', 'version', 3);
 
 % Scan loop
-for i = 1:N(ax.n2)  % add noise scans for the .seq file
-    seq.addBlock(adc);  
-end
-GE.slice = 2;   % reserve slice = 1 for noise scans (at end of scan)
+GE.slice = 1;  
 for j = J  % 1:N(ax.n3) 
     % inversion pulse, spoiler, and delay
     seq.addBlock(rf180);
@@ -229,6 +226,7 @@ for j = J  % 1:N(ax.n3)
         seq.addBlock(adc,gro1,mr.scaleGrad(gpe1c,pe1Steps(i)),gpe2cj);
 
         % excitation and readout (for TOPPE)
+        % GE data is stored in 'slice', 'echo', and 'view' indeces
         toppe.write2loop('tipdown.mod', ...
             'RFphase', rf_phase/180*pi); 
         GE.textra = (i == N(ax.n2)) * GE.outer.delay*1e3; % ms
@@ -236,7 +234,7 @@ for j = J  % 1:N(ax.n3)
             'Gamplitude', [pe2Steps(j) pe1Steps(i) 1.0]', ...
             'DAQphase', rf_phase/180*pi, ...
             'textra', GE.textra, ...
-            'slice', GE.slice, 'view', i);
+            'slice', GE.slice, 'view', i);  
     end
     
     GE.slice = GE.slice + 1;
@@ -244,16 +242,18 @@ for j = J  % 1:N(ax.n3)
     seq.addBlock(mr.makeDelay(TRoutDelay));
 end
 
-% add noise scans for TOPPE
+% add noise scans
 % do this last since receive gain is based on signal from beginning of sequence
 % first insert ~5s pause to allow magnetization/system to settle
+seq.addBlock(mr.makeDelay(5)); % sec
 toppe.write2loop('spoil.mod', ...
     'Gamplitude', [0 0 0]', ...
-    'textra', 5e3);
+    'textra', 5e3-2);  % ms
 for i = 1:N(ax.n2)  
+    seq.addBlock(adc);  
     toppe.write2loop('readout.mod', ...
         'Gamplitude', [0 0 0]', ... % turn off gradients 
-        'slice', 1, 'view', i);   % GE data is stored in 'slice', 'echo', and 'view' indeces
+        'slice', GE.slice, 'view', i);   
 end
 
 % finalize scanloop.txt

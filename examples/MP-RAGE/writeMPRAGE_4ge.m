@@ -99,48 +99,50 @@ gro1.id=seq.registerGradEvent(gro1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Create .mod files and modules.txt needed for execution on GE scanners
 
+gam = 4.2576e3;     % Hz/Gauss
+
 % set system specs
-GE.sys = toppe.systemspecs('maxSlew', 15, 'slewUnit', 'Gauss/cm/ms', ...  % <= scanner limit
+GE.sys = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...  % <= scanner limit
     'maxGrad', 7, 'gradUnit', 'Gauss/cm', ...  % maxGrad *MUST* match the physical scanner spec 
     'maxRf', 0.25, 'rfUnit', 'Gauss'); % <= scanner limit
 
 % set TOPPE low-level system timing variables (scanner specific; times are in us)
 % overrides defaults
 GE.sys.toppe.version = 'v3';
-GE.sys.toppe.start_core_daq = 60;
+GE.sys.toppe.start_core_daq = 100;
 GE.sys.toppe.myrfdel = 148;
 GE.sys.toppe.daqdel = 156;
 GE.sys.toppe.timetrwait = 64;
-GE.sys.timessi = 100;
+GE.sys.timessi = 200;
 
 % write inversion pulse to inversion.mod
-GE.rf180.signal = [0; rf180.signal(:)/gamma; 0];  % Gauss
+GE.rf180.signal = [0; rf180.signal(:)/gam; 0];  % Gauss
 GE.rf180.signal = toppe.utils.makeGElength(GE.rf180.signal);  % enforce 4-sample boundary
 toppe.writemod('rf', GE.rf180.signal, 'ofname', 'inversion.mod');
 
 % write spoil.mod
-GE.spoil.mxs = 5;  % Gauss/cm/ms. Lower to reduce PNS.
+GE.spoil.mxs = 8;  % Gauss/cm/ms. Lower to reduce PNS.
 res = fov(1)/N(1)*100;   % spatial resolution (cm)
 GE.spoil.nSpoilCycles = 4;
 gCrush = toppe.utils.makecrusher(GE.spoil.nSpoilCycles, res, 0, GE.spoil.mxs, GE.sys.maxGrad);
 toppe.writemod('gz', gCrush, 'ofname', 'spoil.mod', 'system', GE.sys);
 
 % write alpha pulse to tipdown.mod
-gamma = 4.2576e3;     % Hz/Gauss
 GE.rf.n = 10;         % number of RF samples (will be padded with zeros below)
 GE.rf.dur = GE.rf.n*GE.raster; 
-GE.rf.signal = [0; (alpha/360) / (gamma * GE.rf.dur) * ones(GE.rf.n,1); 0]; % must start and end with zeros
+GE.rf.signal = [0; (alpha/360) / (gam * GE.rf.dur) * ones(GE.rf.n,1); 0]; % must start and end with zeros
 GE.rf.signal = toppe.utils.makeGElength(GE.rf.signal);  % enforce 4-sample boundary
 toppe.writemod('rf', GE.rf.signal, 'ofname', 'tipdown.mod');
 
 % create readout.mod for TOPPE
-ofname = 'readout.mod';
 tmp = 1;  % z resolution (cm) (is a dummy variable here)
-toppe.utils.makegre(fov(1)*100, N(ax.n1), tmp, ...
+[GE.ro.wav, GE.pe1.wav, GE.pe2.wav] = toppe.utils.makegre(fov(1)*100, N(ax.n1), tmp, ...
     'oprbw', GE.oprbw, ...
     'ncycles', 2, ...    % number of cycles of spoiling along readout (x)
     'system', GE.sys, ...
-    'ofname', ofname);
+    'ofname', 'tmp.mod');
+toppe.writemod('gx', GE.pe2.wav, 'gy', GE.pe1.wav, 'gz', GE.ro.wav, ...
+    'system', GE.sys, 'ofname', 'readout.mod');
 
 % create modules.txt file for TOPPE
 % If placing in a folder other than /usr/g/bin/,
@@ -149,10 +151,10 @@ GE.modFileText = ['' ...
 'Total number of unique cores\n' ...
 '4\n' ...
 'fname  duration(us)    hasRF?  hasDAQ?\n' ...
-'inversion.mod 0   1   0\n' ...     % Entries are tab-separated   
-'spoil.mod 0   0   0\n' ...
-'tipdown.mod 0   1   0\n' ...
-'readout.mod 0   0   1' ];
+'inversion.mod\t0\t1\t0\n' ...   % entries are tab-separated   
+'spoil.mod\t0\t0\t0\n' ...
+'tipdown.mod\t0\t1\t0\n' ...
+'readout.mod\t0\t0\t1' ];
 fid = fopen('modules.txt', 'wt');
 fprintf(fid, GE.modFileText);
 fclose(fid);
@@ -166,23 +168,18 @@ nACS = 20;  % number of auto-calibration lines (dense sampling in center)
 R = 2;      % undersampling outside ACS region
 S = 0*(1:N(ax.n3));
 S(1:R:end) = 1;
-S( (end/2-nACS/2):(end/2+nACS/2-1) ) = 1;
+%S( (end/2-nACS/2):(end/2+nACS/2-1) ) = 1;  % TODO: uncomment
 J = find(S == 1);
 
 % intialize scanloop.txt file for TOPPE
 toppe.write2loop('setup', 'version', 3);
 
 % Scan loop
-for i = 1:N(ax.n2)  % add noise scans
-    % for the .seq file
+for i = 1:N(ax.n2)  % add noise scans for the .seq file
     seq.addBlock(adc);  
-
-    % for TOPPE
-	toppe.write2loop('readout.mod', ...
-		'Gamplitude', [0.0 0 0]', ... % turn off gradients 
-		'slice', 1, 'view', i);   % GE data is stored in 'slice', 'echo', and 'view' indeces
 end
-for j = J  % 1:N(ax.n3)   % main scan loop
+GE.slice = 2;   % reserve slice = 1 for noise scans (at end of scan)
+for j = J  % 1:N(ax.n3) 
     % inversion pulse, spoiler, and delay
     seq.addBlock(rf180);
     seq.addBlock(mr.makeDelay(TIdelay),gslSp);
@@ -191,28 +188,59 @@ for j = J  % 1:N(ax.n3)   % main scan loop
   	toppe.write2loop('inversion.mod', ...
 		'RFamplitude', 1.0);
 	toppe.write2loop('spoil.mod', ...
-		'Gamplitude', [SpoilAmp(:); 0], ...
-		'textra', round(TIdelay*1e6)); % approximate
+		'textra', round(TIdelay*1e3)); % approximate TODO
 
     rf_phase=0;
     rf_inc=0;
+
     % pre-register the PE gradients that repeat in the inner loop
     gpe2cj=mr.scaleGrad(gpe2c,pe2Steps(j));
     gpe2cj.id=seq.registerGradEvent(gpe2cj);
+
     for i=1:N(ax.n2)
         rf.phaseOffset=rf_phase/180*pi;
         adc.phaseOffset=rf_phase/180*pi;
         rf_inc=mod(rf_inc+rfSpoilingInc, 360.0);
         rf_phase=mod(rf_phase+rf_inc, 360.0);
-        %
+
+        % excitation and readout (for .seq file)
         seq.addBlock(rf);
         seq.addBlock(adc,gro1,mr.scaleGrad(gpe1c,pe1Steps(i)),gpe2cj);
+
+        % excitation and readout (for TOPPE)
+        toppe.write2loop('tipdown.mod', ...
+            'RFphase', rf_phase/180*pi);
+        GE.textra = (i == N(ax.n2)) * round(TRoutDelay*1e3); % ms
+        toppe.write2loop('readout.mod', ...
+            'Gamplitude', [pe2Steps(j) pe1Steps(i) 1.0]', ...
+            'DAQphase', rf_phase/180*pi, ...
+            'textra', GE.textra, ...
+            'slice', GE.slice, 'view', i);
     end
+    
+    GE.slice = GE.slice + 1;
+
     seq.addBlock(mr.makeDelay(TRoutDelay));
 end
-toppe.write2loop('finish');   % finalize scanloop.txt
+
+% add noise scans for TOPPE
+% do this here since receive gain is based on signal from beginning of sequence
+% first insert ~5s pause to allow magnetization/system to settle
+toppe.write2loop('spoil.mod', ...
+    'Gamplitude', [0 0 0]', ...
+    'textra', 5e3);
+for i = 1:N(ax.n2)  
+    toppe.write2loop('readout.mod', ...
+        'Gamplitude', [0 0 0]', ... % turn off gradients 
+        'slice', 1, 'view', i);   % GE data is stored in 'slice', 'echo', and 'view' indeces
+end
+
+% finalize scanloop.txt
+toppe.write2loop('finish');   
 
 fprintf('Sequence ready\n');
+
+return;
 
 %% check whether the timing of the sequence is correct
 [ok, error_report]=seq.checkTiming;

@@ -203,10 +203,10 @@ for j = J  % 1:N(ax.n3)
     seq.addBlock(mr.makeDelay(TIdelay),gslSp);
 
     % for TOPPE
-  	toppe.write2loop('inversion.mod', ...
-		'RFamplitude', 1.0);
-	toppe.write2loop('spoil.mod', ...
-		'textra', GE.inversion.delay*1e3); % ms
+    toppe.write2loop('inversion.mod', ...
+        'RFamplitude', 1.0);
+    toppe.write2loop('spoil.mod', ...
+        'textra', GE.inversion.delay*1e3); % ms
 
     rf_phase=0;
     rf_inc=0;

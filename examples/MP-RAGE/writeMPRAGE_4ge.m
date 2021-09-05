@@ -242,9 +242,10 @@ for j = J  % 1:N(ax.n3)
     seq.addBlock(mr.makeDelay(TRoutDelay));
 end
 
-% add noise scans
-% do this last since receive gain is based on signal from beginning of sequence
-% first insert ~5s pause to allow magnetization/system to settle
+% Add noise scans.
+% Do this last since for GE, receive gain is based on signal from 
+% beginning of sequence.
+% First insert ~5s pause to allow magnetization/system to settle.
 seq.addBlock(mr.makeDelay(5)); % sec
 toppe.write2loop('spoil.mod', ...
     'Gamplitude', [0 0 0]', ...

@@ -405,9 +405,9 @@ end
 %% Write scanloop.txt, which specifices the scan sequence (along with modules.txt and the .mod files).
 
 % load .mod files
-mods = toppe.utils.tryread(@toppe.readmodulelistfile, 'modules.txt');
+mods = toppe.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
-toppe.write2loop('setup', 'version', str2num(arg.toppeVersion(2))); 
+toppe.write2loop('setup', arg.system, 'version', str2num(arg.toppeVersion(2))); 
 
 for ib = 1:length(loopStructArr)
 
@@ -470,7 +470,7 @@ for ib = 1:length(loopStructArr)
     end
 
     %toppe.write2loop(sprintf('module%d.mod',iMod), ...
-    toppe.write2loop(moduleArr(iMod).ofname, ...
+    toppe.write2loop(moduleArr(iMod).ofname, arg.system, ...
         'Gamplitude',  Gamplitude, ...
         'waveform',    iWav, ...
         'RFamplitude', RFamplitude, ...
@@ -491,7 +491,7 @@ if textraWarning
         ' ''textra'' set to zero in one or more scanloop.txt entries.\n']);
 end
 
-toppe.write2loop('finish');
+toppe.write2loop('finish', arg.system);
 
 if arg.verbose
     fprintf(' done\n');

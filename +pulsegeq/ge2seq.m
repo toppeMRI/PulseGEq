@@ -76,8 +76,8 @@ end
 
 % Read TOPPE scan info
 max_pg_iamp  = 2^15-2;                  % max TOPPE/GE "instruction amplitude" (signed short int)
-d      = toppe.utils.tryread(@toppe.readloop,           arg.loopFile);         % scanloop array
-modArr = toppe.utils.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   % module waveforms
+d      = toppe.tryread(@toppe.readloop,           arg.loopFile);         % scanloop array
+modArr = toppe.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   % module waveforms
 
 
 %% Loop through scanloop.txt. Add each row as one Pulseq "block".
@@ -99,8 +99,8 @@ for ii = 1:nt
 
     % get waveforms and delay for one row (one startseq call)
     % rf: Gauss; gradients: Gauss/cm; tdelay: microsec
-    [~, ~, ~, ~, rfwav, gxwav, gywav, gzwav, tdelay] = toppe.plotseq(ii, ii, ...
-        'loopArr', d, 'mods', modArr, 'doDisplay', false, 'system', arg.systemGE);  
+    [~, ~, ~, ~, rfwav, gxwav, gywav, gzwav, tdelay] = toppe.plotseq(ii, ii, arg.systemGE, ...
+        'loopArr', d, 'mods', modArr, 'doDisplay', false);
 
     % padding around adc blocks (added as block.delay)
     adcPad = mr.makeDelay(roundtoraster(10*lims.adcDeadTime, lims.gradRasterTime)); % delay needs to be in multiples of raster times

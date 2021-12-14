@@ -38,7 +38,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %% parse inputs
 % Defaults
 arg.system  = toppe.systemspecs();
-arg.toppeVersion = 'v3';
+arg.toppeVersion = 'v4';
 arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.4.0';
@@ -60,8 +60,10 @@ switch arg.toppeVersion
         nCols = 16;   % number of columns in scanloop.txt
     case 'v3' 
         nCols = 25;   % number of columns in scanloop.txt
+    case 'v4' 
+        nCols = 26;   % number of columns in scanloop.txt
     otherwise
-        error('Please use TOPPE v2 or v3');
+        error('Please use TOPPE >= v2');
 end
 
 switch arg.pulseqVersion
@@ -379,7 +381,7 @@ for ic = 1:length(moduleArr)
 
     try
         warning('off');    % don't show message about padding waveforms
-        toppe.writemod('system', arg.system, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', moduleArr(ic).ofname); 
+        toppe.writemod(arg.system, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', moduleArr(ic).ofname); 
         warning('on');
     catch ME
         error(sprintf('Error in writemod:\n%s', ME.message));

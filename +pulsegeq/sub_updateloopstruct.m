@@ -41,17 +41,17 @@ arg = toppe.utils.vararg_pair(arg, varargin);
 if ~isempty(block)
     % Determine textra. See UserGuide/figs/timing.svg
     if ~isempty(block.rf) 
-        start_core = system.toppe.start_core_rf;    % Earliest start of waveform (us).
-        delpre = system.toppe.myrfdel;   % Gradient delay w.r.t. RF waveform (us)
+        start_core = system.start_core_rf;    % Earliest start of waveform (us).
+        delpre = system.myrfdel;   % Gradient delay w.r.t. RF waveform (us)
     elseif ~isempty(block.adc) 
-        start_core = system.toppe.start_core_daq;   % data acquisition module
-        delpre = system.toppe.daqdel; % Gradient delay w.r.t. ADC window (us)
+        start_core = system.start_core_daq;   % data acquisition module
+        delpre = system.daqdel; % Gradient delay w.r.t. ADC window (us)
     else
-        start_core = system.toppe.start_core_grad;  % only gradients
+        start_core = system.start_core_grad;  % only gradients
         delpre = 0;
     end
-    timetrwait = system.toppe.timetrwait;  % us. Minimum delay before ssi time.
-    timessi = system.toppe.timessi;
+    timetrwait = system.timetrwait;  % us. Minimum delay before ssi time.
+    timessi = system.timessi;
     tmp = pulsegeq.sub_block2module(block, 1, system, 1);
     wavdur = tmp.nt*system.raster;  % waveform duration (s)
     arg.textra = max(0, block.blockDuration - wavdur - (start_core + delpre + timetrwait + timessi)*1e-6);   % s

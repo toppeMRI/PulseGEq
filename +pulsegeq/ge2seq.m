@@ -8,6 +8,7 @@ function seq = ge2seq(toppeTarFile, varargin)
 %                     *.mod:            One .modfile corresponds to one "unique" block (see below)
 %                     modules.txt       List of .mod files, and flags indicating whether the .wav file is RF/ADC/(gradients only)
 %                     scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
+%                     If empty ([]), these files are asssumed to exist in the local path.
 % Options:
 %  seqFile            Output .seq file name
 %  FOV                [1 3] (m)
@@ -67,11 +68,13 @@ arg.system.toppe.timetrwait = round(arg.systemSiemens.rfRingdownTime*1e6);   % (
 end
 
 % Untar files
-try
-    system(sprintf('tar xf %s', toppeTarFile));
-catch ME
-    error(ME.message);
-    return;
+if ~isempty(toppeTarFile)
+    try
+        system(sprintf('tar xf %s', toppeTarFile));
+    catch ME
+        error(ME.message);
+        return;
+    end
 end
 
 % Read TOPPE scan info
@@ -92,7 +95,7 @@ for ii = 1:nt
 
     if ~mod(ii,100)
         for ib=1:60; fprintf('\b'); end;
-        fprintf('Parsing scan loop: %d of %d', ii, nt);
+        fprintf('ge2seq: parsing scan loop (%d of %d)', ii, nt);
     end
 
     module = modArr{d(ii,1)};

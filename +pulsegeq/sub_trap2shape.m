@@ -1,5 +1,5 @@
-function wav = sub_trap2shape(grad, gamma, raster)
-% Convert trapezoid to (positive) shape on 4us sample boundary
+function wav = sub_trap2shape(grad, raster)
+% Convert trapezoid to (positive) shape on specified raster sample boundary (default: 4us)
 % Increase rise/fall times by one sample to keep within slew limit (due to 4us sampling)
 %
 % Example:
@@ -9,9 +9,11 @@ function wav = sub_trap2shape(grad, gamma, raster)
 %  gamma = toppe.systemspecs().gamma;
 %  wav = sub_trap2shape(trap, gamma);
 
-if nargin < 3
+if nargin < 2
 	raster = 4e-6;   % sec
 end
+
+gamma = 4.2576e3;       % Hz/G
 
 dt = raster;
 gamp = abs(grad.amplitude)/100/gamma;                % Gauss/cm

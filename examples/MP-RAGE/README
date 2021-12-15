@@ -1,0 +1,10 @@
+Deprecated. Moved to https://github.com/HarmonizedMRI/MP-RAGE
+
+GE UHP 3T scanner at University of Michigan (fMRI lab)  
+
+psd_grd_wait = 156  
+psd_rf_wait = 148  
+start_core_rf = 0  (determined empiricially)
+start_core_daq = 60  (determined empiricially)  
+start_core_grad = 0  (determined empiricially)
+timessi = 100  (determined empiricially)

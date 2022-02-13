@@ -1,14 +1,16 @@
-function seq = ge2seq(toppeTarFile, varargin)
+function seq = ge2seq(toppeTarFile, systemGE, systemSiemens, varargin)
 % function seq = ge2seq(toppeTarFile, varargin)
 %
 % TOPPE to Pulseq file conversion.
 %
 % Inputs:
-%  toppeTarFile       TOPPE .tar archive file containing the following:
-%                     *.mod:            One .modfile corresponds to one "unique" block (see below)
-%                     modules.txt       List of .mod files, and flags indicating whether the .wav file is RF/ADC/(gradients only)
-%                     scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
+%  toppeTarFile       TOPPE .tar archive file containing the following TOPPE scan files:
+%                     *.mod files       
+%                     modules.txt     
+%                     scanloop.txt    S
 %                     If empty ([]), these files are asssumed to exist in the local path.
+%  systemGE           struct specifying GE system specs, see toppe.systemspecs()
+%  systemSiemens      struct specifying Siemens scanner hardware limits, see mr.opts()
 % Options:
 %  seqFile            Output .seq file name
 %  FOV                [1 3] (m)
@@ -16,8 +18,7 @@ function seq = ge2seq(toppeTarFile, varargin)
 %  moduleListFile     Text file listing all .mod files. Default: 'modules.txt'.
 %                     The .mod files listed must exist in the Matlab path.
 %  loopFile           Text file specifying the MR scan loop. Default: 'scanloop.txt'
-%  system             struct specifying Siemens scanner hardware limits, see mr.opts
-%  systemGE           struct specifying GE system specs, see +toppe/systemspecs.m
+%  nt                 Only step through the first nt rows in scanloop.txt. Default: all rows.
 %
 % Examples:
 %  >> pulsegeq.ge2seq('cal.tar', 'seqFile', 'cal.seq');
@@ -25,7 +26,7 @@ function seq = ge2seq(toppeTarFile, varargin)
 %                    'MaxSlew', 130, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
 %                    'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
 %  >> sys = systemspecs('maxSlew', 130, 'slewUnit', 'T/m/s');
-%  >> ge2seq('cal.tar', 'system', lims, 'systemGE', sys);
+%  >> ge2seq('cal.tar', sys, lims);
 %
 
 import pulsegeq.*
@@ -39,23 +40,13 @@ arg.debug          = false;
 arg.debugAdc       = false;
 arg.moduleListFile = 'modules.txt';
 arg.loopFile       = 'scanloop.txt';
-arg.systemGE = toppe.systemspecs('addDelays', false);   % don't add delays before creating Pulseq blocks
-
-arg.system = mr.opts('rfRasterTime', 1e-6, 'gradRasterTime', 10e-6, ...
-                     'rfDeadTime', 100e-6, 'rfRingdownTime', 20e-6, ...
-                     'adcDeadTime', 20e-6, ...
-                     'maxGrad', 80, 'GradUnit', 'mT/m',...
-                     'maxSlew', 200, 'SlewUnit', 'T/m/s');
-
-%arg.system = mr.opts('maxGrad', 40, 'GradUnit', 'mT/m',...
-%                     'maxSlew', 150, 'SlewUnit', 'T/m/s', 'rfRingdownTime', 30e-6, ...
-%                     'rfDeadTime', 100e-6, 'adcDeadTime', 20e-6);  
+arg.nt             = [];
 
 % Substitute varargin values as appropriate
 arg = toppe.utils.vararg_pair(arg, varargin);
 
 % system struct to be used when creating Pulseq blocks
-lims = arg.system;
+lims = systemSiemens;
 
 % Define delays to pass to 'plotseq' call
 %rfdel = max(arg.system.toppe.myrfdel   = round(arg.systemSiemens.rfDeadTime*1e6);       % RF delay (us)
@@ -82,15 +73,21 @@ max_pg_iamp  = 2^15-2;                  % max TOPPE/GE "instruction amplitude" (
 d      = toppe.tryread(@toppe.readloop,           arg.loopFile);         % scanloop array
 modArr = toppe.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   % module waveforms
 
+% set number of rows in scanloop.txt to step through
+if isempty(arg.nt)
+    nt = size(d,1);    % number of startseq calls
+else
+    nt = arg.nt;
+end
+
 
 %% Loop through scanloop.txt. Add each row as one Pulseq "block".
 
 % initialize Pulseq sequence object
 seq = mr.Sequence(lims);
 
-raster = arg.systemGE.raster;  % 4e-6 s
+raster = systemGE.raster;  % 4e-6 s
 
-nt = size(d,1);    % number of startseq calls
 for ii = 1:nt
 
     if ~mod(ii,100)
@@ -102,14 +99,14 @@ for ii = 1:nt
 
     % get waveforms and delay for one row (one startseq call)
     % rf: Gauss; gradients: Gauss/cm; tdelay: microsec
-    [~, ~, ~, ~, rfwav, gxwav, gywav, gzwav, tdelay] = toppe.plotseq(ii, ii, arg.systemGE, ...
+    [~, ~, ~, ~, rfwav, gxwav, gywav, gzwav, tdelay] = toppe.plotseq(ii, ii, systemGE, ...
         'loopArr', d, 'mods', modArr, 'doDisplay', false);
 
     % padding around adc blocks (added as block.delay)
     adcPad = mr.makeDelay(roundtoraster(10*lims.adcDeadTime, lims.gradRasterTime)); % delay needs to be in multiples of raster times
 
     % pulseq likes row vectors
-    rfwav = rfwav(:)';
+    rfwav = rfwav(:).';
     gxwav = gxwav(:)';
     gywav = gywav(:)';
     gzwav = gzwav(:)';

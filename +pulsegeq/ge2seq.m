@@ -122,16 +122,16 @@ for ii = 1:nt
 
     % Make Pulseq gradient structs (including all zero waveforms)
     if module.hasRF
-        delays.grad = systemGE.start_core_rf*1e-6; % sec
+        delay.grad = max(systemGE.start_core_rf*1e-6, systemSiemens.rfDeadTime);  % sec
     elseif module.hasDAQ
-        delays.grad = systemGE.start_core_daq*1e-6;
+        delay.grad = max(systemGE.start_core_daq*1e-6, systemSiemens.adcDeadTime);  % sec
     else
-        delays.grad = systemGE.start_core_grad*1e-6;
+        delay.grad = systemGE.start_core_grad*1e-6;
     end
-    delays.grad = roundtoraster(delays.grad, systemSiemens.gradRasterTime); 
-    gx = mr.makeArbitraryGrad('x', gxwavPulseq, systemSiemens, 'delay', delays.grad);
-    gy = mr.makeArbitraryGrad('y', gywavPulseq, systemSiemens, 'delay', delays.grad);
-    gz = mr.makeArbitraryGrad('z', gzwavPulseq, systemSiemens, 'delay', delays.grad);
+    delay.grad = roundtoraster(delay.grad, systemSiemens.gradRasterTime);  % make multiple of 10us
+    gx = mr.makeArbitraryGrad('x', gxwavPulseq, systemSiemens, 'delay', delay.grad);
+    gy = mr.makeArbitraryGrad('y', gywavPulseq, systemSiemens, 'delay', delay.grad);
+    gz = mr.makeArbitraryGrad('z', gzwavPulseq, systemSiemens, 'delay', delay.grad);
 
     % bitmask indicating non-zero gradients
     hasg = 0;   
@@ -152,28 +152,18 @@ for ii = 1:nt
 
         flip = module.paramsfloat(16)/180*pi;   %  assumes that flip angle is stored in .mod file header
 
-        % start of RF waveform
-        delays.rf = max(0, systemGE.start_core_rf*1e-6 - nChop(1)*raster) + ...
-            systemGE.myrfdel*1e-6 + nChop(1)*raster ;
-        delays.rf = roundtoraster(delays.rf, systemSiemens.gradRasterTime); 
-
-        % seq.testReport says that delay should be > rfDeadTime
-        if delays.rf <= systemSiemens.rfDeadTime
-            warning(sprintf('Request RF start time <= systemSiemens.rfDeadTime. Extended to %.3e.', systemSiemens.rfDeadTime + 10e-6));
-            delays.rf = systemSiemens.rfDeadTime + 10e-6;
-        end
+        % start of RF waveform. Don't include psd_rf_wait.
+        delay.rf = delay.grad;
+        %delay.rf = max(0, systemGE.start_core_rf*1e-6 - nChop(1)*raster) + ...
+        %    systemGE.myrfdel*1e-6 + nChop(1)*raster ;
+        %delay.rf = roundtoraster(delay.rf, systemSiemens.gradRasterTime); 
 
         % rf object
         rf = mr.makeArbitraryRf(rfwavPulseq, flip, ...
             'PhaseOffset', phaseOffset, ...
             'FreqOffset', freqOffset, ...
             'system', systemSiemens, ...
-            'delay', delays.rf);
-
-        % delay after end of waveform
-        postDelay = max(0, delays.rf - raster*nChop(2)) ...  % "coredel" in toppe.plotseq()
-            + (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi)*1e-6 ...
-            + textra*1e-6;
+            'delay', delay.rf);
 
         % create block. Include gradient objects if any.
         if isempty(strArg)
@@ -182,6 +172,10 @@ for ii = 1:nt
             %eval( sprintf( 'seq.addBlock(rf, %s, adcPad)', strArg) ); % TODO: remove adcPad
             eval( sprintf( 'seq.addBlock(rf, %s)', strArg) ); 
         end
+
+        % delay after end of RF waveform
+        postDelay = max(0, systemGE.myrfdel*1e-6 - raster*nChop(2)) ...  % "coredel" in toppe.plotseq()
+            + (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
 
         if arg.debug
             clf;
@@ -192,19 +186,20 @@ for ii = 1:nt
         % Acquire with same raster/dwell time as TOPPE (4us)
         % Make number of samples a multiple of 10 to enforce
         % an even number of samples and duration on 10us boundary.
-        ntmp = numel(gxwav) - sum(nChop); 
+        ntmp = numel(gxwav); % - sum(nChop); 
         nADC = ntmp - mod(ntmp, 10);
 
         phaseOffset = d(ii,13)/max_pg_iamp*pi;          % radians
 
         % start of ADC window 
-        delays.adc = max(0, delays.grad - nChop(1)*raster) ...
-            + systemGE.daqdel*1e-6 + nChop(1)*raster;
-        delays.adc = roundtoraster(delays.adc, systemSiemens.gradRasterTime); 
+        delay.adc = delay.grad;
+        %delay.adc = max(0, delay.grad - nChop(1)*raster) ...
+        %    + systemGE.daqdel*1e-6 + nChop(1)*raster;
+        %delay.adc = roundtoraster(delay.adc, systemSiemens.gradRasterTime); 
 
-        if delays.adc <= systemSiemens.adcDeadTime
-            warning(sprintf('Requested ADC start time <= systemSiemens.adcDeadTime. Extended to %.3e.', systemSiemens.adcDeadTime + 10e-6));
-            delays.adc = systemSiemens.adcDeadTime + 10e-6;
+        if delay.adc < systemSiemens.adcDeadTime
+            warning(sprintf('Requested ADC start time < systemSiemens.adcDeadTime. Extended to %.3e.', systemSiemens.adcDeadTime));
+            delay.adc = systemSiemens.adcDeadTime;
         end
 
         % ADC object
@@ -212,12 +207,7 @@ for ii = 1:nt
             'Dwell', raster, ...
             'PhaseOffset', phaseOffset, ...
             'system', systemSiemens, ...
-            'delay', delays.adc);
-
-        % delay after end of ADC window 
-        postDelay = max(0, systemGE.daqdel*1e-6 - raster*nChop(2)) ...
-            + (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi)*1e-6 ...
-            + textra*1e-6;
+            'delay', delay.adc);
 
         % create block. Include gradient objects if any.
         if isempty(strArg)
@@ -225,6 +215,11 @@ for ii = 1:nt
         else
             eval( sprintf( 'seq.addBlock(%s, adc)', strArg) );
         end
+
+        % delay after end of ADC window 
+        %postDelay = (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
+        postDelay = max(0, systemGE.daqdel*1e-6 - raster*nChop(2)) ...
+            + (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
 
         % Round block duration to 10us boundary (this seems to be a Pulseq requirement)
         %blk = seq.getBlock(blkIndex);
@@ -234,8 +229,7 @@ for ii = 1:nt
         if ~isempty(strArg)
             eval( sprintf( 'seq.addBlock(%s)', strArg) );
         end
-        postDelay = (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi)*1e-6 ...
-            + textra*1e-6;
+        postDelay = (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
     end
 
     if arg.debug

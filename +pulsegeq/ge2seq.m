@@ -150,7 +150,9 @@ for ii = 1:nt
         phaseOffset = d(ii,12)/max_pg_iamp*pi;  % radians
         freqOffset  = d(ii,15);                         % Hz
 
-        flip = module.paramsfloat(16)/180*pi;   %  assumes that flip angle is stored in .mod file header
+        % get nominal/full flip angle from .mod file header, and flip angle scaling for this block
+        nominalFlip = module.paramsfloat(16)/180*pi;   %  assumes that flip angle is stored in .mod file header
+        flipScaling = d(ii, 2)/max_pg_iamp;
 
         % start of RF waveform. Don't include psd_rf_wait.
         delay.rf = delay.grad;
@@ -159,7 +161,7 @@ for ii = 1:nt
         %delay.rf = roundtoraster(delay.rf, systemSiemens.gradRasterTime); 
 
         % rf object
-        rf = mr.makeArbitraryRf(rfwavPulseq, flip, ...
+        rf = mr.makeArbitraryRf(rfwavPulseq, flipScaling*nominalFlip, ...
             'PhaseOffset', phaseOffset, ...
             'FreqOffset', freqOffset, ...
             'system', systemSiemens, ...

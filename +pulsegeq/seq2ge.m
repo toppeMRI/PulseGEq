@@ -15,7 +15,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
 % Input options:
 %   system            struct        Contains GE and TOPPE system specs, including TOPPE version. See +toppe/systemspecs.m
-%   toppeVersion      string        'v3' (default) or 'v2'
+%   toppeVersion      string        'v4' (default) or 'v3'
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   tarFile           string        default: 'toppeScanFiles.tar'

@@ -55,11 +55,14 @@ if ~isempty(toppeTarFile)
         error(ME.message);
         return;
     end
+else
+    % The following TOPPE scan files must exist in current folder:
+    % modules.txt, scanloop.txt, and the .mod files listed in modules.txt
 end
 
 
 %% Read TOPPE scan info
-max_pg_iamp  = 2^15-2;                  % max TOPPE/GE "instruction amplitude" (signed short int)
+max_pg_iamp  = 2^15-2;    % max TOPPE/GE "instruction amplitude" (signed short int)
 d      = toppe.tryread(@toppe.readloop,           arg.loopFile);         % scanloop array
 modArr = toppe.tryread(@toppe.readmodulelistfile, arg.moduleListFile);   % module waveforms
 
@@ -74,12 +77,14 @@ end
 
 %% Loop through scanloop.txt. Add each row as one Pulseq "block".
 % Thankfully, no need to check for uniqueness since
-% the Pulseq Matlab package does that for us automagically.
+% the Pulseq Matlab package already does that for us.
 
 % initialize Pulseq sequence object
 seq = mr.Sequence(systemSiemens);
 
 raster = systemGE.raster;  % 4e-6 s
+
+t = 0;  % running time 
 
 for ii = 1:nt
 
@@ -122,9 +127,9 @@ for ii = 1:nt
 
     % Make Pulseq gradient structs (including all zero waveforms)
     if module.hasRF
-        delay.grad = max(systemGE.start_core_rf*1e-6, systemSiemens.rfDeadTime);  % sec
+        delay.grad = max(systemGE.start_core_rf*1e-6 - raster*nChop(1), systemSiemens.rfDeadTime);  % sec
     elseif module.hasDAQ
-        delay.grad = max(systemGE.start_core_daq*1e-6, systemSiemens.adcDeadTime);  % sec
+        delay.grad = max(systemGE.start_core_daq*1e-6 - raster*nChop(1), systemSiemens.adcDeadTime);  % sec
     else
         delay.grad = systemGE.start_core_grad*1e-6;
     end
@@ -175,9 +180,11 @@ for ii = 1:nt
             eval( sprintf( 'seq.addBlock(rf, %s)', strArg) ); 
         end
 
-        % delay after end of RF waveform
-        postDelay = max(0, systemGE.myrfdel*1e-6 - raster*nChop(2)) ...  % "coredel" in toppe.plotseq()
-            + (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
+        % Delay after end of RF waveform
+        % Don't add psd_rf_wait (=myrfdel) here.
+        %postDelay = max(0, systemGE.myrfdel*1e-6 - raster*nChop(2)) ...  % "coredel" in toppe.plotseq()
+        %    + (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
+        postDelay = (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
 
         if arg.debug
             clf;
@@ -218,10 +225,11 @@ for ii = 1:nt
             eval( sprintf( 'seq.addBlock(%s, adc)', strArg) );
         end
 
-        % delay after end of ADC window 
-        %postDelay = (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
-        postDelay = max(0, systemGE.daqdel*1e-6 - raster*nChop(2)) ...
-            + (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
+        % Delay after end of ADC window 
+        % Don't add daqdel.
+        postDelay = (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
+        %postDelay = max(0, systemGE.daqdel*1e-6 - raster*nChop(2)) ...
+        %    + (systemGE.timetrwait + systemGE.tminwait + systemGE.timessi + textra)*1e-6;
 
         % Round block duration to 10us boundary (this seems to be a Pulseq requirement)
         %blk = seq.getBlock(blkIndex);
@@ -262,6 +270,12 @@ for ii = 1:nt
     postDelay = roundtoraster(postDelay, systemSiemens.gradRasterTime); 
     del = mr.makeDelay(postDelay);
     seq.addBlock(del);
+    b1 = seq.getBlock(2*(ii-1)+1);
+    t1 = b1.blockDuration*1e3;
+    b2 = seq.getBlock(2*(ii-1)+2);
+    t2 = b2.blockDuration*1e3;
+    t = t + t1 + t2;
+    %[ t t1 t2]
     clear postDelay; 
 end
 fprintf('\n');

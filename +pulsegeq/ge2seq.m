@@ -95,11 +95,11 @@ for ii = 1:nt
 
     module = modArr{d(ii,1)};
 
-    % get waveforms (as row vectors)
-    rfwav = (module.rf).';
-    gxwav = (module.gx)';
-    gywav = (module.gy)';
-    gzwav = (module.gz)';
+    % get scaled waveforms (as row vectors)
+    rfwav = (module.rf).';  % full scale -- scaling done in makeArbitraryRf call
+    gxwav = d(ii,4)/max_pg_iamp*(module.gx)';
+    gywav = d(ii,5)/max_pg_iamp*(module.gy)';
+    gzwav = d(ii,6)/max_pg_iamp*(module.gz)';
 
     % convert to Pulseq units
     % rf:   Hz

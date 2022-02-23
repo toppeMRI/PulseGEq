@@ -95,6 +95,9 @@ for ii = 1:nt
 
     module = modArr{d(ii,1)};
 
+    % get number of discarded samples at beginning+end of RF waveform / ADC window
+    nChop = [module.npre  module.res - module.rfres - module.npre];
+
     % get scaled waveforms (as row vectors)
     rfwav = (module.rf).';  % full scale -- scaling done in makeArbitraryRf call
     gxwav = d(ii,4)/max_pg_iamp*(module.gx)';
@@ -119,17 +122,14 @@ for ii = 1:nt
     tgrad  = length(gxwavPulseq) * seq.gradRasterTime;
     rfwavPulseq = [rfwavPulseq zeros(1,round((tgrad-trf)/seq.rfRasterTime))];
 
-    % get number of discarded samples at beginning+end of RF/ADC modules
-    nChop = [module.npre  module.res - module.rfres - module.npre]; 
-
     % additional delay at end of module
     textra = d(ii,14);   % us (microseconds)
 
     % Make Pulseq gradient structs (including all zero waveforms)
     if module.hasRF
-        delay.grad = max(systemGE.start_core_rf*1e-6 - raster*nChop(1), systemSiemens.rfDeadTime);  % sec
+        delay.grad = max(systemGE.start_core_rf*1e-6, systemSiemens.rfDeadTime);  % sec
     elseif module.hasDAQ
-        delay.grad = max(systemGE.start_core_daq*1e-6 - raster*nChop(1), systemSiemens.adcDeadTime);  % sec
+        delay.grad = max(systemGE.start_core_daq*1e-6, systemSiemens.adcDeadTime);  % sec
     else
         delay.grad = systemGE.start_core_grad*1e-6;
     end
@@ -152,21 +152,27 @@ for ii = 1:nt
     strArg = getStrArg(hasg);    % 'gz' or 'gx,gy,gz' or... as appropriate
 
     if module.hasRF
+        if nChop(2) < ceil(systemSiemens.rfRingdownTime/raster)
+            error(sprintf('%s: RF ringdown occurs past end of gradient -- increase nChop(2)', module.fname));
+        end
+
         phaseOffset = d(ii,12)/max_pg_iamp*pi;  % radians
-        freqOffset  = d(ii,15);                         % Hz
+        freqOffset  = d(ii,15);                 % Hz
 
         % get nominal/full flip angle from .mod file header, and flip angle scaling for this block
         nominalFlip = module.paramsfloat(16)/180*pi;   %  assumes that flip angle is stored in .mod file header
         flipScaling = d(ii, 2)/max_pg_iamp;
 
         % start of RF waveform. Don't include psd_rf_wait.
-        delay.rf = delay.grad;
+        delay.rf = delay.grad + nChop(1)*raster;
         %delay.rf = max(0, systemGE.start_core_rf*1e-6 - nChop(1)*raster) + ...
         %    systemGE.myrfdel*1e-6 + nChop(1)*raster ;
         %delay.rf = roundtoraster(delay.rf, systemSiemens.gradRasterTime); 
 
         % rf object
-        rf = mr.makeArbitraryRf(rfwavPulseq, flipScaling*nominalFlip, ...
+        iStart = 1 + round(nChop(1)*raster / systemSiemens.rfRasterTime);
+        iStop = round( (length(rfwav) - sum(nChop))*raster / systemSiemens.rfRasterTime);
+        rf = mr.makeArbitraryRf(rfwavPulseq(iStart:iStop), flipScaling*nominalFlip, ...
             'PhaseOffset', phaseOffset, ...
             'FreqOffset', freqOffset, ...
             'system', systemSiemens, ...
@@ -195,13 +201,13 @@ for ii = 1:nt
         % Acquire with same raster/dwell time as TOPPE (4us)
         % Make number of samples a multiple of 10 to enforce
         % an even number of samples and duration on 10us boundary.
-        ntmp = numel(gxwav); % - sum(nChop); 
-        nADC = ntmp - mod(ntmp, 10);
+        ntmp = numel(gxwav) - sum(nChop); 
+        nADC = ntmp - mod(ntmp, 10);  % number of data samples to acquire
 
         phaseOffset = d(ii,13)/max_pg_iamp*pi;          % radians
 
         % start of ADC window 
-        delay.adc = delay.grad;
+        delay.adc = delay.grad + nChop(1)*raster;
         %delay.adc = max(0, delay.grad - nChop(1)*raster) ...
         %    + systemGE.daqdel*1e-6 + nChop(1)*raster;
         %delay.adc = roundtoraster(delay.adc, systemSiemens.gradRasterTime); 

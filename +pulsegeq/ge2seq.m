@@ -276,12 +276,6 @@ for ii = 1:nt
     postDelay = roundtoraster(postDelay, systemSiemens.gradRasterTime); 
     del = mr.makeDelay(postDelay);
     seq.addBlock(del);
-    b1 = seq.getBlock(2*(ii-1)+1);
-    t1 = b1.blockDuration*1e3;
-    b2 = seq.getBlock(2*(ii-1)+2);
-    t2 = b2.blockDuration*1e3;
-    t = t + t1 + t2;
-    %[ t t1 t2]
     clear postDelay; 
 end
 fprintf('\n');

@@ -22,7 +22,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, sys, varargin)
 %   blockStop         int           end at this block in the .seq file (for testing)
 %
 % Usage example:
-%   >> sys = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
+%   >> sys = toppe.systemspecs('maxSlew',20,'maxGrad',50');  % units: G/cm/ms and G/cm
 %   >> seq = mr.Sequence();
 %   >> seq.read('2DFLASH.seq');
 %   >> seq2ge(seq, sys, 'verbose', true);

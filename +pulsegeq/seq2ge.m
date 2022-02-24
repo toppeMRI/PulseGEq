@@ -1,5 +1,5 @@
-function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
-% function seq2ge(seqarg, varargin)
+function [moduleArr loopStructArr] = seq2ge(seqarg, sys, varargin)
+% function seq2ge(seqarg, sys, varargin)
 %
 % Convert a Pulseq file (http://pulseq.github.io/) to a set of TOPPE files
 % that can be executed on GE MR scanners. 
@@ -13,31 +13,25 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %
 % Inputs:
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
+%   sys               struct        Contains GE and TOPPE system specs, including TOPPE version. See +toppe/systemspecs.m
 % Input options:
-%   system            struct        Contains GE and TOPPE system specs, including TOPPE version. See +toppe/systemspecs.m
 %   toppeVersion      string        'v4' (default) or 'v3'
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   tarFile           string        default: 'toppeScanFiles.tar'
 %   blockStop         int           end at this block in the .seq file (for testing)
 %
-% Usage examples:
-%   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
-%   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
-%
-%   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
-%   >> seq2ge('2DFLASH.seq', 'system', system, 'verbose', true);
-%
+% Usage example:
+%   >> sys = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
 %   >> seq = mr.Sequence();
 %   >> seq.read('2DFLASH.seq');
-%   >> seq2ge(seq, 'system', system);
+%   >> seq2ge(seq, sys, 'verbose', true);
 %
 
 %import pulsegeq.*
 
 %% parse inputs
 % Defaults
-arg.system  = toppe.systemspecs();
 arg.toppeVersion = 'v4';
 arg.verbose = false;
 arg.debug = false;
@@ -116,11 +110,11 @@ end
 
 % First entry in 'moduleArr' struct array
 block = seq.getBlock(arg.ibstart);
-moduleArr(1) = pulsegeq.sub_block2module(block, arg.ibstart, arg.system, 1);
+moduleArr(1) = pulsegeq.sub_block2module(block, arg.ibstart, sys, 1);
 
 % First entry in 'loopStructArr' struct array (first block is by definition a module)
 nextblock = seq.getBlock(arg.ibstart+1);   % needed to set 'textra' in scanloop.txt
-loopStructArr(1) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, 'mod', 1);
+loopStructArr(1) = pulsegeq.sub_updateloopstruct([], block, nextblock, sys, 'mod', 1);
 
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
 sl = 1;
@@ -161,14 +155,14 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
     % view = 1, ..., system.maxView
     % sl   = 1, ..., system.maxSlice
     if ~isempty(block.adc)
-        view = mod(adcCount, arg.system.maxView) + 1;
-        sl   = floor(adcCount/arg.system.maxView) + 1;
-        if sl > arg.system.maxSlice;
-            error(sprintf('max number of slices ecxeeded (%d)', arg.system.maxSlice));
+        view = mod(adcCount, sys.maxView) + 1;
+        sl   = floor(adcCount/sys.maxView) + 1;
+        if sl > sys.maxSlice;
+            error(sprintf('max number of slices ecxeeded (%d)', sys.maxSlice));
         end
-        echo = floor(adcCount/(arg.system.maxView*arg.system.maxSlice));
-        if echo > arg.system.maxEcho
-            error(sprintf('max number of echoes ecxeeded (%d)', arg.system.maxEcho));
+        echo = floor(adcCount/(sys.maxView*sys.maxSlice));
+        if echo > sys.maxEcho
+            error(sprintf('max number of echoes ecxeeded (%d)', sys.maxEcho));
         end
         %fprintf('ib: %d, view: %d, sl: %d, echo: %d\n', ib, view, sl, echo);
 
@@ -176,7 +170,7 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
     end
 
     % create a TOPPE module struct from current Pulseq block
-    modCandidate = pulsegeq.sub_block2module(block, ib, arg.system, length(moduleArr) + 1);
+    modCandidate = pulsegeq.sub_block2module(block, ib, sys, length(moduleArr) + 1);
 
     % Is there an existing module that can be 'reused'?
     % Specifically, does one of the existing modules (elements of moduleArr) have the same length waveform, 
@@ -202,7 +196,7 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
             fprintf('\tFound new module at block %d\n', ib);
         end
         moduleArr(end+1) = modCandidate;
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...
+        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, sys, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(moduleArr));
         continue; % done, so move on to next block
     end
@@ -237,12 +231,12 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
         % We found a set of RF/gradient waveforms in modularArr(ic) with the same shapes as those in modCandidate,
         % so we'll 'reuse' that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
         iWavReuse = I(1);
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ...
+        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, sys, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', iWavReuse);
     else
         % Found a new set of shapes, so add this waveform set to moduleArr(ic)
-        moduleArr(ic) = pulsegeq.sub_updatemodule(moduleArr(ic), block, ib, arg.system);
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, arg.system, ... 
+        moduleArr(ic) = pulsegeq.sub_updatemodule(moduleArr(ic), block, ib, sys);
+        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, sys, ... 
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', moduleArr(ic).npulses);
     end
 
@@ -381,7 +375,7 @@ for ic = 1:length(moduleArr)
 
     try
         warning('off');    % don't show message about padding waveforms
-        toppe.writemod(arg.system, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', moduleArr(ic).ofname); 
+        toppe.writemod(sys, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', moduleArr(ic).ofname); 
         warning('on');
     catch ME
         error(sprintf('Error in writemod:\n%s', ME.message));
@@ -407,7 +401,7 @@ end
 % load .mod files
 mods = toppe.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
-toppe.write2loop('setup', arg.system, 'version', str2num(arg.toppeVersion(2))); 
+toppe.write2loop('setup', sys, 'version', str2num(arg.toppeVersion(2))); 
 
 for ib = 1:length(loopStructArr)
 
@@ -470,7 +464,7 @@ for ib = 1:length(loopStructArr)
     end
 
     %toppe.write2loop(sprintf('module%d.mod',iMod), ...
-    toppe.write2loop(moduleArr(iMod).ofname, arg.system, ...
+    toppe.write2loop(moduleArr(iMod).ofname, sys, ...
         'Gamplitude',  Gamplitude, ...
         'waveform',    iWav, ...
         'RFamplitude', RFamplitude, ...
@@ -491,7 +485,7 @@ if textraWarning
         ' ''textra'' set to zero in one or more scanloop.txt entries.\n']);
 end
 
-toppe.write2loop('finish', arg.system);
+toppe.write2loop('finish', sys);
 
 if arg.verbose
     fprintf(' done\n');

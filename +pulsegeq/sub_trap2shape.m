@@ -6,8 +6,7 @@ function wav = sub_trap2shape(grad, raster)
 %  seq = mr.Sequence();
 %  seq.read('myseq.seq');
 %  trap = seq.getBlock(2).gz
-%  gamma = toppe.systemspecs().gamma;
-%  wav = sub_trap2shape(trap, gamma);
+%  wav = sub_trap2shape(trap, 4e-6);
 
 if nargin < 2
 	raster = 4e-6;   % sec

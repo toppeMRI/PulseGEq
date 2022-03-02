@@ -7,7 +7,7 @@ function module = sub_updatemodule(module, block, blockid, system)
 % Inputs:
 %   module           see sub_block2module()
 %   blockid          Pulseq block is seq.getBlock(blockid)
-%   system           system struct (see above)
+%   system           TOPPE system struct
 
 import pulsegeq.*
 
@@ -76,7 +76,7 @@ for ax = {'gx','gy','gz'};
             wav = wav/100/system.gamma;                  % Gauss/cm
         else
             % trapezoid
-            wav = sub_trap2shape(grad, system.gamma);     % Gauss/cm
+            wav = sub_trap2shape(grad, system.raster);     % Gauss/cm
         end
 
         % check slew

@@ -1,5 +1,5 @@
 function seq = ge2seq(toppeTarFile, systemGE, systemSiemens, varargin)
-% function seq = ge2seq(toppeTarFile, varargin)
+% function seq = ge2seq(toppeTarFile, systemGE, systemSiemens, varargin)
 %
 % TOPPE to Pulseq file conversion.
 %

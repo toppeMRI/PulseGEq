@@ -1,4 +1,4 @@
-function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
+function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
 % function seq2ge(seqarg, varargin)
 %
 % Convert a Pulseq file (http://pulseq.github.io/) to a set of TOPPE files
@@ -13,13 +13,14 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, varargin)
 %
 % Inputs:
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
+%   systemGE          struct        Contains scanner hardware and TOPPE-specific specs. See +toppe/systemspecs.m
 % Input options:
-%   system            struct        Contains GE and TOPPE system specs, including TOPPE version. See +toppe/systemspecs.m
 %   toppeVersion      string        'v4' (default) or 'v3'
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   tarFile           string        default: 'toppeScanFiles.tar'
 %   blockStop         int           end at this block in the .seq file (for testing)
+%   nt                 Only step through the first nt rows in scanloop.txt. Default: all rows.
 %
 % Usage examples:
 %   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
@@ -44,7 +45,8 @@ arg.debug = false;
 arg.pulseqVersion = 'v1.4.0';
 arg.tarFile = 'toppeScanFiles.tar';
 arg.blockStop = [];
-arg.ibstart = 1;
+arg.ibstart = 1;    % skip the first (ibstart-1) events (for testing)
+arg.nt      = [];
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -114,6 +116,13 @@ if ~isempty(arg.blockStop)
     blockEvents = blockEvents(1:arg.blockStop, :);
 end
 
+% set number of blocks (rows in .seq file) to step through
+if isempty(arg.nt)
+    nt = size(blockEvents, 1);
+else
+    nt = arg.nt;
+end
+
 % First entry in 'moduleArr' struct array
 block = seq.getBlock(arg.ibstart);
 moduleArr(1) = pulsegeq.sub_block2module(block, arg.ibstart, arg.system, 1);
@@ -129,7 +138,7 @@ echo = 0;
 adcCount = 0;
 
 % h = waitbar(0,'Looping through blocks and looking for uniqueness...');
-for ib = (arg.ibstart+1):size(blockEvents,1)
+for ib = (arg.ibstart+1):nt
     if ~mod(ib, 500)
     %   waitbar(ib/size(blockEvents,1),h)
         for inb = 1:20

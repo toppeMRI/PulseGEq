@@ -24,17 +24,17 @@ xlabel('ms');
 ylabel('G/cm');
 
 if ~isempty(blk.gx)
-	gx = pulsegeq.sub_trap2shape(blk.gx, gamma, gradRasterTime);
+	gx = pulsegeq.sub_trap2shape(blk.gx, gradRasterTime);
 	tgx = linspace(blk.gx.delay+gradRasterTime, blk.gx.delay+gradRasterTime*length(gx), length(gx));
 	plot(tgx, gx, 'r.'); 
 end
 if ~isempty(blk.gy)
-	gy = pulsegeq.sub_trap2shape(blk.gy, gamma, gradRasterTime);
+	gy = pulsegeq.sub_trap2shape(blk.gy, gradRasterTime);
 	tgy = linspace(blk.gy.delay+gradRasterTime, blk.gy.delay+gradRasterTime*length(gy), length(gy));
 	plot(tgy, gy, 'g.'); 
 end
 if ~isempty(blk.gz)
-	gz = pulsegeq.sub_trap2shape(blk.gz, gamma, gradRasterTime);
+	gz = pulsegeq.sub_trap2shape(blk.gz, gradRasterTime);
 	tgz = linspace(blk.gz.delay+gradRasterTime, blk.gz.delay+gradRasterTime*length(gz), length(gz));
 	plot(tgz, gz, 'b.'); 
 end
@@ -43,7 +43,7 @@ if ~isempty(blk.rf)
 	rf = blk.rf.signal/gamma; % Gauss
 	trf  = linspace(blk.rf.delay+rfRasterTime, blk.rf.delay+rfRasterTime*length(rf), length(rf));
 	subplot(122); 
-	plot(trf, rf, 'b.'); ylabel('rf'); xlabel('ms');
+	plot(trf, abs(rf), 'b.'); ylabel('rf'); xlabel('ms');
 	legend('rf (G)');
 end
 
@@ -60,7 +60,7 @@ end
 
 subplot(122);
 if ~isempty(rf)
-	axis([max(0,tbeg-0.5e-3) tend+0.5e-3 min(rf)-0.05 max(rf)+0.05]);
+	axis([max(0,tbeg-0.5e-3) tend+0.5e-3 min(abs(rf))-0.05 max(abs(rf))+0.05]);
 end
 
 

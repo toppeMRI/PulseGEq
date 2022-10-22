@@ -154,14 +154,14 @@ for ib = (arg.ibstart+1):nt
     else
         nextblock = [];
     end
-    if isfield(nextblock, 'trig') 
-        nextblock = [];
-    end
+%    if isfield(nextblock, 'trig') 
+%        nextblock = [];
+%    end
 
     % Empty (pure delay) blocks are accounted for in 'textra' in the previous row in scanloop.txt
     if isempty(block.rf) & isempty(block.adc) ...
-        & isempty(block.gx) & isempty(block.gy) & isempty(block.gz) ...
-        | isfield(block, 'trig')  % ignore trigger (ext) blocks for now. TODO
+        & isempty(block.gx) & isempty(block.gy) & isempty(block.gz) % ...
+        %| isfield(block, 'trig')  % ignore trigger (ext) blocks for now. TODO
         continue;  % Done, move on to next block 
     end
 

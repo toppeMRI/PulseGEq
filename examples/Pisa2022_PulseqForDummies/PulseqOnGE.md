@@ -1,4 +1,6 @@
-# Pulseq for dummies (GE related content)
+# Pulseq on GE
+
+"Pulseq course for dummies" satellite course, Pisa, Italy 23-Nov-2022
 
 ## Overview
 

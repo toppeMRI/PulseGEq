@@ -1,5 +1,31 @@
-function b04ge(sys, N, FOV, flip, DTE, varargin)
-% function b04ge(sys, N, FOV, flip, DTE, varargin)
+function write3dflash_4ge
+
+sysGE = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
+    'maxGrad', 5, 'gradUnit', 'Gauss/cm', ...
+    'myrfdel', 152, ...                          % psd_rf_wait (gradient/rf delay, us)
+    'daqdel', 152, ...                           % psd_grd_wait (gradient/acquisition delay, us)
+    'gradient', 'xrm');                          % xrm: MR750; hrmb: UHP; hrmw: Premier
+
+N = [100 100 50];   % matrix size
+FOV = [20 20 10];   % FOV (cm)
+flip = 10;          % degrees
+DTE = [0];          % extend TE by this much (ms). If vector, acquisitions are interleaved
+
+if false
+sub_flash(sysGE, N, FOV, flip, DTE, ...
+    'rfSpoilSeed', 117, ...
+    'nCyclesSpoil', 2, ...
+    'fatsat', false);
+end
+
+rf = toppe.readmod('tipdown.mod');
+toppe.plotseq(1, 2, sysGE, ...
+    'rhomax', 1.1*max(abs(rf))); 
+
+return
+
+function sub_flash(sys, N, FOV, flip, DTE, varargin)
+% function sub_flash(sys, N, FOV, flip, DTE, varargin)
 %
 % Fully-sampled 3D RF-spoiled GRE sequence for B0 (and B1-) mapping.
 % 
@@ -77,17 +103,19 @@ toppe.writeentryfile(arg.entryFile, ...
 
 %% Create .mod files
 
-% fat sat module
-fatsat.flip    = 90;
-fatsat.slThick = 1000;       % dummy value (determines slice-select gradient, but we won't use it; just needs to be large to reduce dead time before+after rf pulse)
-fatsat.tbw     = 2.0;        % time-bandwidth product
-fatsat.dur     = 4.5;        % pulse duration (ms)
+if arg.fatsat
+    % fat sat module
+    fatsat.flip    = 90;
+    fatsat.slThick = 1000;       % dummy value (determines slice-select gradient, but we won't use it; just needs to be large to reduce dead time before+after rf pulse)
+    fatsat.tbw     = 2.0;        % time-bandwidth product
+    fatsat.dur     = 4.5;        % pulse duration (ms)
 
-b1 = toppe.utils.rf.makeslr(fatsat.flip, fatsat.slThick, fatsat.tbw, fatsat.dur, 1e-6, sys, ...
-    'type', 'ex', ...    % fatsat pulse is a 90 so is of type 'ex', not 'st' (small-tip)
-    'writeModFile', false);
-b1 = toppe.makeGElength(b1);
-toppe.writemod(sys, 'rf', b1, 'ofname', 'fatsat.mod', 'desc', 'fat sat pulse');
+    b1 = toppe.utils.rf.makeslr(fatsat.flip, fatsat.slThick, fatsat.tbw, fatsat.dur, 1e-6, sys, ...
+        'type', 'ex', ...    % fatsat pulse is a 90 so is of type 'ex', not 'st' (small-tip)
+        'writeModFile', false);
+    b1 = toppe.makeGElength(b1);
+    toppe.writemod(sys, 'rf', b1, 'ofname', 'fatsat.mod', 'desc', 'fat sat pulse');
+end
 
 % excitation module
 [ex.rf, ex.g] = toppe.utils.rf.makeslr(flip, arg.slabThick, ...

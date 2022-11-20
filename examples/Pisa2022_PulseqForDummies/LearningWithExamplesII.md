@@ -3,7 +3,7 @@
 "Pulseq course for dummies" satellite course, Pisa, Italy 23-Nov-2022
 
 
-## Radiofrequency pulses: simulating
+## Sequence analysis: Radiofrequency pulses and perpheral nerve stmiu
 
 
 +mr function

@@ -46,15 +46,15 @@ $ cd PulseGEq/examples/Pisa2022_PulseqForDummies
 
 ## Example 1: Pulseq to GE conversion (2D GRE)
 
-### Create the .seq file (2dgre.seq)
+### Create the .seq file (gre.seq)
 ```
->> write2dgre;
+>> writeGradientEcho;
 ```
 
 ==> Check and plot .seq file
 
 
-### Convert 2dgre.seq file to the 'TOPPE' file format
+### Convert gre.seq file to the 'TOPPE' file format
 
 Set GE scanner hardware limits 
 ```
@@ -67,7 +67,7 @@ sys.ge = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
 
 Do the file conversion
 ```
->>  pulsegeq.seq2ge('2dgre.seq', sys.ge, 'verbose', false);
+>> pulsegeq.seq2ge('gre.seq', sysGE);
 ```
 
 

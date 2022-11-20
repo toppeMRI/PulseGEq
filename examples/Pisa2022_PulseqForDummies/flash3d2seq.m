@@ -1,0 +1,9 @@
+
+% set Siemens system limits
+sys = mr.opts('MaxGrad', 28, 'GradUnit', 'mT/m', ...
+    'MaxSlew', 150, 'SlewUnit', 'T/m/s', ... 
+    'rfRingdownTime', 20e-6, 'rfDeadTime', 100e-6, 'adcDeadTime', 10e-6);
+
+pulsegeq.ge2seq('3dflash.tar', sysGE, sys, ...
+    'seqFile', '3dflash.seq', ...  % output file name
+    'FOV', FOV/10);                % m

@@ -11,12 +11,11 @@ FOV = [20 20 10];   % FOV (cm)
 flip = 10;          % degrees
 DTE = [0];          % extend TE by this much (ms). If vector, acquisitions are interleaved
 
-if false
 sub_flash(sysGE, N, FOV, flip, DTE, ...
     'rfSpoilSeed', 117, ...
-    'nCyclesSpoil', 2, ...
-    'fatsat', false);
-end
+    'nCyclesSpoil', 2);
+
+system('mv b0.tar 3dflash.tar');
 
 rf = toppe.readmod('tipdown.mod');
 toppe.plotseq(1, 2, sysGE, ...
@@ -188,7 +187,7 @@ fprintf('TR = %.3f ms\n', toppe.getTRtime(1, 2, sys)*1e3);
 toppe.preflightcheck(arg.entryFile, 'seqstamp.txt', sys);
 
 % Write files to tar archive (for convenience).
-system(sprintf('tar cf b0.tar %s seqstamp.txt scanloop.txt modules.txt *.mod', arg.entryFile));
+system(sprintf('tar cf b0.tar %s seqstamp.txt scanloop.txt modules.txt tipdown.mod readout.mod', arg.entryFile));
 
 toppe.utils.scanmsg(arg.entryFile);
 

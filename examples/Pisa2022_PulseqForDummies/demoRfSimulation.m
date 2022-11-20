@@ -9,7 +9,7 @@ sys = mr.opts('B0', 2.89);
 
 %% 30 degree slice selective SINC pulse 
 rf30_sinc = mr.makeSincPulse(pi/6,'system',sys,'Duration',3e-3,'use','excitation',...
-    'PhaseOffset',pi/2,'apodization',0.3,'timeBwProduct',4);
+    'PhaseOffset',pi/2,'apodization',0.3,'timeBwProduct', 8);
 
 [bw,f0,M_xy_sta,F1]=mr.calcRfBandwidth(rf30_sinc);
 [M_z,M_xy,F2]=mr.simRf(rf30_sinc);
@@ -27,6 +27,8 @@ legend({'M_xSIM','M_ySIM'});
 xlabel('frequency offset / Hz');
 ylabel('magnetisation');
 title('Real and imag. parts of transverse magnetisation, 30° flip');
+
+return
 
 %% 90 degree slice selective SINC pulse 
 rf90_sinc = mr.makeSincPulse(pi/2,'system',sys,'Duration',3e-3,'use','excitation',...

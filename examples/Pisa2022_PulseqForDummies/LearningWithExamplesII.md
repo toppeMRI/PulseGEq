@@ -3,25 +3,28 @@
 "Pulseq course for dummies" satellite course, Pisa, Italy 23-Nov-2022
 
 
-## Radiofrequency pulses: simulating
-
+## Sequence analysis: slice profile
 
 +mr function
 
 toppe function
 
 sinc pulse example
+SLR pulse example
 
 SMS pulse example (w/ imaging results)
 
 
-## Gradients: estimating peripheral nerve stimulation (PNS)
+## Sequence analysis: peripheral nerve stimulation (PNS)
 
 Vendors measure PNS experimentally to determine threshold.
 
-Siemens model
+GE model + implementation
 
-GE model
+
+## Sequence analysis: specific absorption rate (SAR)
+
+
 
 
 ## Non-cartesian imaging example: 3D stack of spirals

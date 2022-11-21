@@ -46,19 +46,17 @@ $ cd PulseGEq/examples/Pisa2022_PulseqForDummies
 
 ## Example 1: Pulseq to GE conversion (2D GRE)
 
-### Create the .seq file (2dgre.seq)
+### Create the .seq file (gre.seq)
 ```
->> write2dgre;
+>> writeGradientEcho_4ge;
 ```
 
-==> Check and plot .seq file
 
-
-### Convert 2dgre.seq file to the 'TOPPE' file format
+### Convert gre.seq file to the 'TOPPE' file format
 
 Set GE scanner hardware limits 
 ```
-sys.ge = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
+sysGE = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
     'maxGrad', 5, 'gradUnit', 'Gauss/cm', ...
     'myrfdel', 152, ...                          % psd_rf_wait (gradient/rf delay, us)
     'daqdel', 152, ...                           % psd_grd_wait (gradient/acquisition delay, us)
@@ -67,7 +65,7 @@ sys.ge = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
 
 Do the file conversion
 ```
->>  pulsegeq.seq2ge('2dgre.seq', sys.ge, 'verbose', false);
+>> pulsegeq.seq2ge('gre.seq', sysGE, 'verbose', true);
 ```
 
 
@@ -85,29 +83,33 @@ it may be a good option to first create a set of TOPPE files using the TOPPE MAT
 and then convert the sequence to Pulseq using `ge2seq.m`.
 
 
-### Create the TOPPE sequence files (3dflash.tar)
+### Create the TOPPE sequence files (flash3d.tar)
 
 ```
->> write3dflash_4ge;
+>> writeflash3d;
 ```
 
-The file 3dflash.tar can be executed on GE scanners as described above for the 2D GRE scan.
+The file flash3d.tar can be executed on GE scanners as described above for the 2D GRE scan.
 
-3dflash.tar contains multiple files that work together to define the execution of the MR sequence.
+flash3d.tar contains multiple files that work together to define the execution of the MR sequence.
 A detailed description of these files can be found
 [here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
 
 
-### Convert 3dflash.tar to 3dflash.seq
+### Convert flash3d.tar to flash3d.seq
 
-Set Siemens scanner hardware limits
+(flash3d2seq.m)
+
 ```
->> sys.siemens = mr.
+sysSiemens = mr.opts('MaxGrad', 50, 'GradUnit', 'mT/m', ...
+    'MaxSlew', 200, 'SlewUnit', 'T/m/s', ... 
+    'rfRingdownTime', 20e-6, 'rfDeadTime', 100e-6, 'adcDeadTime', 10e-6);
+
+pulsegeq.ge2seq('flash3d.tar', sys, sysSiemens, ...
+    'seqFile', 'flash3d.seq', ...  % output file name
+    'nt', 200, ...
+    'FOV', FOV/100);                % m
 ```
 
-Convert to .seq file
-```
->> pulsegeq.ge2seq('3dflash.tar', sys.siemens, 'ofname', '3dflash.seq');
-```
 
 

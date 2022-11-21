@@ -46,26 +46,31 @@ $ cd PulseGEq/examples/Pisa2022_PulseqForDummies
 
 ## Example 1: Pulseq to GE conversion (2D GRE)
 
-### Create the .seq file (gre.seq)
+Create the .seq file (gre.seq):
 ```
->> writeGradientEcho_4ge;
+>> writeGradientEcho; 
 ```
 
 
-### Convert gre.seq file to the 'TOPPE' file format
-
-Set GE scanner hardware limits 
+Convert gre.seq file to the 'TOPPE' file format:
 ```
-sysGE = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
+>> sysGE = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
     'maxGrad', 5, 'gradUnit', 'Gauss/cm', ...
     'myrfdel', 152, ...                          % psd_rf_wait (gradient/rf delay, us)
     'daqdel', 152, ...                           % psd_grd_wait (gradient/acquisition delay, us)
     'gradient', 'xrm');                          % xrm: MR750; hrmb: UHP; hrmw: Premier
+
+>> pulsegeq.seq2ge('gre.seq', sysGE, 'verbose', true, 'tarFile', 'gre.seq.tar');
 ```
 
-Do the file conversion
+
+## Example 2: Pulseq to GE conversion (2D GRE), more efficient implementation
+
+Create a version of the previous sequence that contains fewer blocks:
 ```
->> pulsegeq.seq2ge('gre.seq', sysGE, 'verbose', true);
+>> system('rm *.mod');       % remove the GE 'module' files
+>> writeGradientEcho_4ge;    % creates gre_4ge.seq
+>> pulsegeq.seq2ge('gre_4gre.seq', sysGE, 'verbose', true, 'tarFile', 'gre_4ge.seq.tar');
 ```
 
 

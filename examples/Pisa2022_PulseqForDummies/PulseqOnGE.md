@@ -69,6 +69,12 @@ Convert gre.seq file to the 'TOPPE' file format:
 >> pulsegeq.seq2ge('gre.seq', sysGE, 'verbose', true, 'tarFile', 'gre.seq.tar');
 ```
 
+Display the GE sequence:
+```
+>> nModsPerTR = X;
+>> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
+```
+
 
 ## Example 2: Pulseq to GE conversion (2D GRE), more efficient implementation
 
@@ -83,10 +89,10 @@ Convert gre_4ge.seq file to the TOPPE file format:
 >> pulsegeq.seq2ge('gre_4gre.seq', sysGE, 'verbose', true, 'tarFile', 'gre_4ge.seq.tar');
 ```
 
-'Play' the GE sequence:
+Display the GE sequence:
 ```
 >> nModsPerTR = 2;
->> toppe.playseq(nModsperTR, sysGE, 'nTRskip', 2, 'gmax', 3, 'rhomax', 0.01);
+>> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
 ```
 
 
@@ -95,7 +101,7 @@ Convert gre_4ge.seq file to the TOPPE file format:
 
 
 
-## Example 2: GE to Pulseq conversion (3D FLASH/SPGR/T1-FFE)
+## Example 3: GE to Pulseq conversion (3D FLASH/SPGR/T1-FFE)
 
 For sites that use GE as their primary development platform, 
 and that wish to also export the sequence to Siemens scanners,

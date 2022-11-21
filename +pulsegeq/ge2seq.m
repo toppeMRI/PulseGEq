@@ -99,14 +99,15 @@ for ii = 1:nt
     nChop = [module.npre  module.res - module.rfres - module.npre];
 
     % get scaled waveforms (as row vectors)
-    rfwav = (module.rf).';  % full scale -- scaling done in makeArbitraryRf call
-    gxwav = d(ii,4)/max_pg_iamp*(module.gx)';
-    gywav = d(ii,5)/max_pg_iamp*(module.gy)';
-    gzwav = d(ii,6)/max_pg_iamp*(module.gz)';
+    rfwav = (module.rf(:,1)).';  % full scale -- scaling done in makeArbitraryRf call
+    gxwav = d(ii,4)/max_pg_iamp*(module.gx(:,1))';
+    gywav = d(ii,5)/max_pg_iamp*(module.gy(:,1))';
+    gzwav = d(ii,6)/max_pg_iamp*(module.gz(:,1))';
 
     % convert to Pulseq units
     % rf:   Hz
     % grad: Hz/m
+    %if ii==258; keyboard;  end;
     rfwavPulseq = rf2pulseq(rfwav,raster,seq);
     gxwavPulseq = g2pulseq( gxwav,raster,seq);
     gywavPulseq = g2pulseq( gywav,raster,seq);
@@ -153,7 +154,9 @@ for ii = 1:nt
 
     if module.hasRF
         if nChop(2) < ceil(systemSiemens.rfRingdownTime/raster)
-            error(sprintf('%s: RF ringdown occurs past end of gradient -- increase nChop(2)', module.fname));
+            %error(sprintf('%s: RF ringdown occurs past end of gradient -- increase nChop(2)', module.fname));
+            %nChop(2) = 48;
+            %warning(sprintf('%s: RF ringdown occurs past end of gradient -- nChop(2) set to 48 samples', module.fname));
         end
 
         phaseOffset = d(ii,12)/max_pg_iamp*pi;  % radians

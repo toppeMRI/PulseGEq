@@ -51,6 +51,12 @@ Create the .seq file (gre.seq):
 >> writeGradientEcho; 
 ```
 
+Plot the .seq file:
+```
+>> seq = mr.Sequence(sys);
+>> seq.read('gre.seq');
+>> seq.plot('timeRange', [0 12e-3], 'showblocks', true);
+```
 
 Convert gre.seq file to the 'TOPPE' file format:
 ```
@@ -70,14 +76,23 @@ Create a version of the previous sequence that contains fewer blocks:
 ```
 >> system('rm *.mod');       % remove the GE 'module' files
 >> writeGradientEcho_4ge;    % creates gre_4ge.seq
+```
+
+Convert gre_4ge.seq file to the TOPPE file format:
+```
 >> pulsegeq.seq2ge('gre_4gre.seq', sysGE, 'verbose', true, 'tarFile', 'gre_4ge.seq.tar');
 ```
 
+'Play' the GE sequence:
+```
+>> nModsPerTR = 2;
+>> toppe.playseq(nModsperTR, sysGE, 'nTRskip', 2, 'gmax', 3, 'rhomax', 0.01);
+```
 
-### Execute the sequence on a GE scanner
+
+## Executing the sequences on a GE scanner and loading the data
 
 
-### Load the data and reconstruct
 
 
 ## Example 2: GE to Pulseq conversion (3D FLASH/SPGR/T1-FFE)

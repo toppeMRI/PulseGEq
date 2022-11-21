@@ -126,11 +126,12 @@ seq.write('gre_4ge.seq')       % Write to pulseq file
 
 %seq.install('siemens');
 
+return
+
 %% plot sequence
 
 seq.plot('timeRange', [0 2]*TR);
 
-return
 
 % k-space trajectory calculation
 [ktraj_adc, t_adc, ktraj, t_ktraj, t_excitation, t_refocusing] = seq.calculateKspacePP();

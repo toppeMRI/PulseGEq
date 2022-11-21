@@ -25,7 +25,14 @@ Simultaneous multi-slice (SMS) pulse:
 
 ## Sequence analysis: peripheral nerve stimulation (PNS)
 
-GE model + implementation
+GE model (Schulte paper)
+
+toppe.pns, toppe.plotmod
+
+```
+>> toppe.writemod(sysGE, 'gz', gz, 'ofname', 'tmp.mod');
+>> toppe.plotmod('tmp.mod', 'gradient', 'xrm', 'printPNS', true);
+```
 
 
 ## Sequence analysis: specific absorption rate (SAR)

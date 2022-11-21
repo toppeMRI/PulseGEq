@@ -50,8 +50,43 @@ assert(all(delayTR>=mr.calcDuration(gxSpoil,gzSpoil)));
 rf_phase=0;
 rf_inc=0;
 
+% create 'composite' block containing pe encoding gradients, readout gradient, and spoiler gradient
+
+% First create dummy sequence, then write waveforms as aribtrary shapes
+c = 1;
+seq_d = mr.Sequence(sys);           % dummy sequence
+gyPre = mr.makeTrapezoid('y','Area', -phaseAreas(1), 'Duration', mr.calcDuration(gxPre), 'system',sys);
+seq_d.addBlock(gxPre,gyPre,gzReph);
+seq_d.addBlock(mr.makeDelay(delayTE(c)));
+seq_d.addBlock(gx,adc);
+gyPre.amplitude=-gyPre.amplitude;
+seq_d.addBlock(mr.makeDelay(delayTR(c)), gxSpoil, gyPre, gzSpoil);
+
+% make new ADC
+adcDur=seq_d.duration-2*sys.adcDeadTime; % dead times at the beginning and at the end 
+adcSamplesPerSegment=100; % we need some "roundish" number of samples
+adcNumSam=floor(adcDur/adc.dwell/adcSamplesPerSegment)*adcSamplesPerSegment; 
+adc_read = mr.makeAdc(adcNumSam,'dwell',adc.dwell,'system',sys);
+
+wave_data = seq_d.waveforms_and_times();
+wave_length = seq_d.duration/sys.gradRasterTime;
+wave_time = ((1:wave_length)-0.5)*sys.gradRasterTime;
+wave_x = interp1(wave_data{1}(1,:), wave_data{1}(2,:), wave_time,'linear',0); % the last value of 0 is important to extrapolate with 0s
+wave_y = interp1(wave_data{2}(1,:),wave_data{2}(2,:),wave_time,'linear',0);
+wave_z = interp1(wave_data{3}(1,:),wave_data{3}(2,:),wave_time,'linear',0);
+
+gx_read = mr.makeArbitraryGrad('x', wave_x);
+gy_read = mr.makeArbitraryGrad('y',wave_y);
+gz_read = mr.makeArbitraryGrad('y',wave_z);
+
+%seq.addBlock(rf,gz);
+%seq.addBlock(gx_read, gy_read, gz_read, adc_read);
+
+%rf = mr.makeArbitraryRf(ex.signal, alpha/180*pi, 'system', sys);
+
 % Loop over phase encodes and define sequence blocks
 for i=1:Ny
+    gy_read_amplitude_scale = ((i-1) - Ny/2)/(Ny/2)
     for c=1:length(TE)
         %seq.addBlock(rf_fs,gz_fs); % fat-sat
         rf.phaseOffset=rf_phase/180*pi;
@@ -60,12 +95,15 @@ for i=1:Ny
         rf_phase=mod(rf_phase+rf_inc, 360.0);
         %
         seq.addBlock(rf,gz);
-        gyPre = mr.makeTrapezoid('y','Area',phaseAreas(i),'Duration',mr.calcDuration(gxPre),'system',sys);
-        seq.addBlock(gxPre,gyPre,gzReph);
-        seq.addBlock(mr.makeDelay(delayTE(c)));
-        seq.addBlock(gx,adc);
-        gyPre.amplitude=-gyPre.amplitude;
-        seq.addBlock(mr.makeDelay(delayTR(c)),gxSpoil,gyPre,gzSpoil)
+        gy_read = mr.makeArbitraryGrad('y', gy_read_amplitude_scale*wave_y);
+        %gy_read.amplitude = gy_read.amplitude * gy_read_amplitude_scale;
+        seq.addBlock(gx_read, gy_read, gz_read, adc_read);
+        %gyPre = mr.makeTrapezoid('y','Area',phaseAreas(i),'Duration',mr.calcDuration(gxPre),'system',sys);
+        %seq.addBlock(gxPre,gyPre,gzReph);
+        %seq.addBlock(mr.makeDelay(delayTE(c)));
+        %seq.addBlock(gx,adc);
+        %gyPre.amplitude=-gyPre.amplitude;
+        %seq.addBlock(mr.makeDelay(delayTR(c)),gxSpoil,gyPre,gzSpoil)
     end
 end
 

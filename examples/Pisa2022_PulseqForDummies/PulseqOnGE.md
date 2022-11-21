@@ -75,6 +75,13 @@ Display the GE sequence:
 >> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
 ```
 
+## GE file structure
+
+gre.tar contains multiple files that work together to define the execution of the MR sequence.
+A detailed description of these files can be found
+[here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
+
+
 
 ## Example 2: Pulseq to GE conversion (2D GRE), more efficient implementation
 

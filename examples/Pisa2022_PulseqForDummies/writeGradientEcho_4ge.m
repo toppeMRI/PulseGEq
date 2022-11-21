@@ -122,13 +122,13 @@ end
 seq.setDefinition('FOV', [fov fov sliceThickness]);
 seq.setDefinition('Name', 'gre');
 
-seq.write('gre.seq')       % Write to pulseq file
+seq.write('gre_4ge.seq')       % Write to pulseq file
 
 %seq.install('siemens');
 
 %% plot sequence
 
-seq.plot('timeRange', [0 5]*TR);
+seq.plot('timeRange', [0 2]*TR);
 
 return
 

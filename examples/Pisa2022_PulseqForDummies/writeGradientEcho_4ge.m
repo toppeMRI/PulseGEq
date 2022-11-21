@@ -75,9 +75,9 @@ wave_x = interp1(wave_data{1}(1,:), wave_data{1}(2,:), wave_time,'linear',0); % 
 wave_y = interp1(wave_data{2}(1,:),wave_data{2}(2,:),wave_time,'linear',0);
 wave_z = interp1(wave_data{3}(1,:),wave_data{3}(2,:),wave_time,'linear',0);
 
-gx_read = mr.makeArbitraryGrad('x', wave_x);
-gy_read = mr.makeArbitraryGrad('y',wave_y);
-gz_read = mr.makeArbitraryGrad('y',wave_z);
+gx_read = mr.makeArbitraryGrad('x', [0 wave_x 0]);
+gy_read = mr.makeArbitraryGrad('y', [0 wave_y 0]);
+gz_read = mr.makeArbitraryGrad('z', [0 wave_z 0]);
 
 %seq.addBlock(rf,gz);
 %seq.addBlock(gx_read, gy_read, gz_read, adc_read);
@@ -86,7 +86,7 @@ gz_read = mr.makeArbitraryGrad('y',wave_z);
 
 % Loop over phase encodes and define sequence blocks
 for i=1:Ny
-    gy_read_amplitude_scale = ((i-1) - Ny/2)/(Ny/2)
+    gy_read_amplitude_scale = ((i-1) - Ny/2)/(Ny/2);
     for c=1:length(TE)
         %seq.addBlock(rf_fs,gz_fs); % fat-sat
         rf.phaseOffset=rf_phase/180*pi;
@@ -126,9 +126,11 @@ seq.write('gre.seq')       % Write to pulseq file
 
 %seq.install('siemens');
 
-%% plot sequence and k-space diagrams
+%% plot sequence
 
 seq.plot('timeRange', [0 5]*TR);
+
+return
 
 % k-space trajectory calculation
 [ktraj_adc, t_adc, ktraj, t_ktraj, t_excitation, t_refocusing] = seq.calculateKspacePP();

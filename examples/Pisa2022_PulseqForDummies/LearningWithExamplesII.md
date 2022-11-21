@@ -2,11 +2,12 @@
 
 "Pulseq course for dummies" satellite course, Pisa, Italy 23-Nov-2022
 
+With Pulseq, we have complete knowledge of the MR sequence, which
+allows us to inspect and check the sequence before exporting it to the scanner.
+
 
 ## Sequence analysis: slice profile
 
-With Pulseq, we have complete knowledge of the MR sequence, which
-allows us to inspect and check the sequence before exporting it to the scanner.
 
 Here we will simulate the slice profile, to
 verify that the flip angle and slice thickness are correct.
@@ -25,17 +26,24 @@ Simultaneous multi-slice (SMS) pulse:
 
 ## Sequence analysis: peripheral nerve stimulation (PNS)
 
-GE model (Schulte paper)
+GE's model is described in Schulte et al 2014.
 
-toppe.pns, toppe.plotmod
-
+Example:
 ```
->> toppe.writemod(sysGE, 'gz', gz, 'ofname', 'tmp.mod');
->> toppe.plotmod('tmp.mod', 'gradient', 'xrm', 'printPNS', true);
+>> pns;
 ```
 
 
-## Sequence analysis: specific absorption rate (SAR)
+## Handling RF power (SAR) and gradient heating
+
+SAR can be estimated in advance by comparing the RF power 
+to a reference sequence with known SAR monitor reading for a certain patient weight.
+
+Likewise, the gradient power can be calculated and entered into the
+interpreter's gradient heating checks.
+
+GE example:
+`toppe.preflightcheck()`
 
 
 
@@ -45,3 +53,4 @@ toppe.pns, toppe.plotmod
 stack of spirals, including fat saturation
 
 simulate spectral profile of fat sat pulse
+

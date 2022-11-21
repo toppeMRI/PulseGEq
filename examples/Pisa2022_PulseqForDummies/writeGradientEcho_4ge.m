@@ -14,15 +14,6 @@ TE=5e-3;                        % echo time TE
 % more in-depth parameters
 rfSpoilingInc=117;              % RF spoiling increment
 
-% Create fat-sat pulse 
-% (in Siemens interpreter from January 2019 duration is limited to 8.192 ms, and although product EPI uses 10.24 ms, 8 ms seems to be sufficient)
-% B0=2.89; % 1.5 2.89 3.0
-% sat_ppm=-3.45;
-% sat_freq=sat_ppm*1e-6*B0*lims.gamma;
-% rf_fs = mr.makeGaussPulse(110*pi/180,'system',lims,'Duration',8e-3,...
-%     'bandwidth',abs(sat_freq),'freqOffset',sat_freq);
-% gz_fs = mr.makeTrapezoid('z',sys,'delay',mr.calcDuration(rf_fs),'Area',1/1e-4); % spoil up to 0.1mm
-
 % Create alpha-degree slice selection pulse and gradient
 [rf, gz] = mr.makeSincPulse(alpha*pi/180,'Duration',3e-3,...
     'SliceThickness',sliceThickness,'apodization',0.42,'timeBwProduct',4,'system',sys);
@@ -50,9 +41,8 @@ assert(all(delayTR>=mr.calcDuration(gxSpoil,gzSpoil)));
 rf_phase=0;
 rf_inc=0;
 
-% create 'composite' block containing pe encoding gradients, readout gradient, and spoiler gradient
-
-% First create dummy sequence, then write waveforms as aribtrary shapes
+% For GE: create 'composite' block containing pe encoding gradients, readout gradient, and spoiler gradient
+% First create dummy sequence
 c = 1;
 seq_d = mr.Sequence(sys);           % dummy sequence
 gyPre = mr.makeTrapezoid('y','Area', -phaseAreas(1), 'Duration', mr.calcDuration(gxPre), 'system',sys);
@@ -68,6 +58,7 @@ adcSamplesPerSegment=100; % we need some "roundish" number of samples
 adcNumSam=floor(adcDur/adc.dwell/adcSamplesPerSegment)*adcSamplesPerSegment; 
 adc_read = mr.makeAdc(adcNumSam,'dwell',adc.dwell,'system',sys);
 
+% write gradient waveforms as aribtrary shapes
 wave_data = seq_d.waveforms_and_times();
 wave_length = seq_d.duration/sys.gradRasterTime;
 wave_time = ((1:wave_length)-0.5)*sys.gradRasterTime;
@@ -78,9 +69,6 @@ wave_z = interp1(wave_data{3}(1,:),wave_data{3}(2,:),wave_time,'linear',0);
 gx_read = mr.makeArbitraryGrad('x', [0 wave_x 0]);
 gy_read = mr.makeArbitraryGrad('y', [0 wave_y 0]);
 gz_read = mr.makeArbitraryGrad('z', [0 wave_z 0]);
-
-%seq.addBlock(rf,gz);
-%seq.addBlock(gx_read, gy_read, gz_read, adc_read);
 
 %rf = mr.makeArbitraryRf(ex.signal, alpha/180*pi, 'system', sys);
 
@@ -96,14 +84,7 @@ for i=1:Ny
         %
         seq.addBlock(rf,gz);
         gy_read = mr.makeArbitraryGrad('y', gy_read_amplitude_scale*wave_y);
-        %gy_read.amplitude = gy_read.amplitude * gy_read_amplitude_scale;
         seq.addBlock(gx_read, gy_read, gz_read, adc_read);
-        %gyPre = mr.makeTrapezoid('y','Area',phaseAreas(i),'Duration',mr.calcDuration(gxPre),'system',sys);
-        %seq.addBlock(gxPre,gyPre,gzReph);
-        %seq.addBlock(mr.makeDelay(delayTE(c)));
-        %seq.addBlock(gx,adc);
-        %gyPre.amplitude=-gyPre.amplitude;
-        %seq.addBlock(mr.makeDelay(delayTR(c)),gxSpoil,gyPre,gzSpoil)
     end
 end
 

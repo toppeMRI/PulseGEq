@@ -95,7 +95,15 @@ $ rm module1.mod module2.mod ...      % remove existing .mod files in working fo
 >> writeGradientEcho_4ge;             % creates gre_4ge.seq
 ```
 
-Convert gre_4ge.seq file to the TOPPE file format:
+Let's compare with the original sequence:
+```
+>> seq.read('gre.seq');
+>> seq.plot('timeRange', [0 12e-3], 'showblocks', true);
+>> seq.read('gre_4ge.seq');
+>> seq.plot('timeRange', [0 12e-3], 'showblocks', true);
+```
+
+Convert gre_4ge.seq to the TOPPE file format:
 ```
 >> pulsegeq.seq2ge('gre_4gre.seq', sysGE, 'verbose', true, 'tarFile', 'gre_4ge.seq.tar');
 ```

@@ -66,7 +66,7 @@ Convert gre.seq file to the 'TOPPE' file format:
 
 Display the GE sequence:
 ```
->> toppe.plotseq(1, 5, sysGE);
+>> toppe.plotseq(1, 8, sysGE);
 >> nModsPerTR = 4;
 >> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
 ```
@@ -98,12 +98,9 @@ The function `toppe.utils.loadpfile` may be used to load P-files.
 
 ## Example 2: Pulseq to GE conversion (2D GRE), more efficient implementation
 
-Clean up TOPPE scan files from last example:
-```
-$ rm *.mod modules.txt scanloop.txt
-```
+First clean up TOPPE scan files from last example (remove .mod files, modules.txt, scanloop.txt).
 
-Create a version of the previous sequence that contains fewer blocks:
+Then create a version of the previous sequence that contains fewer blocks:
 ```
 >> writeGradientEcho_4ge;             % creates gre_4ge.seq
 ```
@@ -119,11 +116,12 @@ Let's compare with the original sequence:
 
 Convert gre_4ge.seq to the TOPPE file format:
 ```
->> pulsegeq.seq2ge('gre_4gre.seq', sysGE, 'verbose', true, 'tarFile', 'gre_4ge.seq.tar');
+>> pulsegeq.seq2ge('gre_4ge.seq', sysGE, 'verbose', true, 'tarFile', 'gre_4ge.seq.tar');
 ```
 
 Display the GE sequence:
 ```
+>> toppe.plotseq(1, 4, sysGE);
 >> nModsPerTR = 2;
 >> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
 ```
@@ -139,35 +137,34 @@ and then convert the sequence to Pulseq using `ge2seq.m`.
 
 ### Create the TOPPE sequence files (flash3d.tar)
 
-Clean up TOPPE scan files from last example:
+First clean up TOPPE scan files from last example (remove .mod files, modules.txt, scanloop.txt).
+
+Then:
 ```
-$ rm *.mod modules.txt scanloop.txt
+>> writeflash3d_4ge;
 ```
 
+Display it:
 ```
->> writeflash3d;
+>> toppe.plotseq(1, 4, sysGE, 'gmax', 5, 'rhomax', 0.04);
+>> nModsPerTR = 2;
+>> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.04);
 ```
 
-The file flash3d.tar can be executed on GE scanners as described above for the 2D GRE scan.
-
-flash3d.tar contains multiple files that work together to define the execution of the MR sequence.
-A detailed description of these files can be found
-[here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
+(Code walk-through)
 
 
 ### Convert flash3d.tar to flash3d.seq
 
-(flash3d2seq.m)
-
 ```
-sysSiemens = mr.opts('MaxGrad', 50, 'GradUnit', 'mT/m', ...
-    'MaxSlew', 200, 'SlewUnit', 'T/m/s', ... 
-    'rfRingdownTime', 20e-6, 'rfDeadTime', 100e-6, 'adcDeadTime', 10e-6);
-
-pulsegeq.ge2seq('flash3d.tar', sys, sysSiemens, ...
+>> example3;  % or:
+>> pulsegeq.ge2seq('flash3d.tar', sys, sys, ...
     'seqFile', 'flash3d.seq', ...  % output file name
     'nt', 200, ...
     'FOV', FOV/100);                % m
+>> seq = mr.Sequence(sys);
+>> seq.read('flash3d.seq');
+>> seq.plot('timeRange', [0 20e-3]);
 ```
 
 

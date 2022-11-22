@@ -110,6 +110,7 @@ Create a version of the previous sequence that contains fewer blocks:
 
 Let's compare with the original sequence:
 ```
+>> example2;   % or:
 >> seq.read('gre.seq');
 >> seq.plot('timeRange', [0 12e-3], 'showblocks', true);
 >> seq.read('gre_4ge.seq');

@@ -29,6 +29,7 @@ Simultaneous multi-slice (SMS) pulse:
 ## Sequence analysis: peripheral nerve stimulation (PNS)
 
 GE's model is described in Schulte et al 2014.
+(Contrast w/ SAFE model)
 
 Example:
 ```

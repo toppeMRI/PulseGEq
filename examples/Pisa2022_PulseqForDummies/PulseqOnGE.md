@@ -15,7 +15,7 @@ That conversion is exact.
 Thus, the TOPPE MATLAB toolbox can be viewed as an alternative set of tools for creating a .seq file
 (in addition to the 'official' Pulseq toolbox, `+mr`).
 
-Working with Pulseq on GE scanners requires the
+Working with Pulseq on GE scanners in the way described here requires the
 [PulseGEq](https://github.com/toppeMRI/PulseGEq)
 MATLAB toolbox, which in turn requires the
 [TOPPE](https://github.com/toppeMRI/toppe)
@@ -55,7 +55,7 @@ Plot the .seq file:
 >> seq.plot('timeRange', [0 12e-3], 'showblocks', true);
 ```
 
-Convert gre.seq file to the 'TOPPE' file format:
+Convert gre.seq to the 'TOPPE' file format:
 ```
 >> getsys  % or:
 >> sysGE = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
@@ -66,7 +66,8 @@ Convert gre.seq file to the 'TOPPE' file format:
 
 Display the GE sequence:
 ```
->> toppe.plotseq(1, 8, sysGE);
+>> % The following functions read modules.txt, scanloop.txt, and .mod files from working folder
+>> toppe.plotseq(1, 8, sysGE);  
 >> nModsPerTR = 4;
 >> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
 ```
@@ -84,9 +85,9 @@ A detailed description of these files can be found
 
 To display the sequence in MATLAB, only the following files are needed:
 ```
-.mod files 
 modules.txt
 scanloop.txt
+module (.mod) files 
 ```
 
 Detailed scanning instructions can be found 
@@ -141,7 +142,7 @@ First clean up TOPPE scan files from last example (remove .mod files, modules.tx
 
 Then:
 ```
->> writeflash3d_4ge;
+>> writeflash3d_4ge;   % creates flash3d.tar
 ```
 
 Display it:

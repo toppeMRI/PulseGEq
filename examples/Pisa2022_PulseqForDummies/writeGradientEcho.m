@@ -3,6 +3,8 @@
 %    'MaxSlew', 150, 'SlewUnit', 'T/m/s', ... 
 %    'rfRingdownTime', 20e-6, 'rfDeadTime', 100e-6, 'adcDeadTime', 10e-6);
 
+getsys;
+
 seq=mr.Sequence(sys);           % Create a new sequence object
 fov=256e-3; Nx=256; Ny=256;     % Define FOV and resolution
 alpha=10;                       % flip angle

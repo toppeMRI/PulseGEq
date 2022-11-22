@@ -1,7 +1,9 @@
 % set system limits
-sys = mr.opts('MaxGrad', 28, 'GradUnit', 'mT/m', ...
-    'MaxSlew', 150, 'SlewUnit', 'T/m/s', ... 
-    'rfRingdownTime', 20e-6, 'rfDeadTime', 100e-6, 'adcDeadTime', 10e-6);
+%sys = mr.opts('MaxGrad', 28, 'GradUnit', 'mT/m', ...
+%    'MaxSlew', 150, 'SlewUnit', 'T/m/s', ... 
+%    'rfRingdownTime', 20e-6, 'rfDeadTime', 100e-6, 'adcDeadTime', 10e-6);
+
+getsys;
 
 seq=mr.Sequence(sys);           % Create a new sequence object
 fov=256e-3; Nx=256; Ny=256;     % Define FOV and resolution
@@ -67,7 +69,7 @@ wave_y = interp1(wave_data{2}(1,:),wave_data{2}(2,:),wave_time,'linear',0);
 wave_z = interp1(wave_data{3}(1,:),wave_data{3}(2,:),wave_time,'linear',0);
 
 gx_read = mr.makeArbitraryGrad('x', [0 wave_x 0]);
-gy_read = mr.makeArbitraryGrad('y', [0 wave_y 0]);
+% gy_read = mr.makeArbitraryGrad('y', [0 wave_y 0]);  % we'll create this object inside the scan loop
 gz_read = mr.makeArbitraryGrad('z', [0 wave_z 0]);
 
 %rf = mr.makeArbitraryRf(ex.signal, alpha/180*pi, 'system', sys);

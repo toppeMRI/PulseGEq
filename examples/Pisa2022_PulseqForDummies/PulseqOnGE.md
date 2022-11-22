@@ -82,6 +82,13 @@ gre.tar contains multiple files that work together to define the execution of th
 A detailed description of these files can be found
 [here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
 
+To display the sequence in MATLAB, only the following files are needed:
+```
+.mod files 
+modules.txt
+scanloop.txt
+```
+
 Detailed scanning instructions can be found 
 [here](https://github.com/jfnielsen/TOPPEpsdSourceCode/) (private repository -- restricted to GE users).
 

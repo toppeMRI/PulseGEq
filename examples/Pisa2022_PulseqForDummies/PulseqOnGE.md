@@ -75,20 +75,26 @@ Display the GE sequence:
 >> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
 ```
 
-## GE file structure
+
+## GE (TOPPE) scan file structure and scan instructions
 
 gre.tar contains multiple files that work together to define the execution of the MR sequence.
 A detailed description of these files can be found
 [here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
 
+Detailed scanning instructions can be found 
+[here](https://github.com/jfnielsen/TOPPEpsdSourceCode/) (private repository -- restricted to GE users).
+
+The acquired data is saved in either Pfiles and/or ScanArchive files, as with any vendor or custom sequence.
+The function `toppe.utils.loadpfile` may be used to load P-files.
 
 
 ## Example 2: Pulseq to GE conversion (2D GRE), more efficient implementation
 
 Create a version of the previous sequence that contains fewer blocks:
 ```
->> system('rm *.mod');       % remove the GE 'module' files
->> writeGradientEcho_4ge;    % creates gre_4ge.seq
+$ rm module1.mod module2.mod ...      % remove existing .mod files in working folder
+>> writeGradientEcho_4ge;             % creates gre_4ge.seq
 ```
 
 Convert gre_4ge.seq file to the TOPPE file format:
@@ -101,11 +107,6 @@ Display the GE sequence:
 >> nModsPerTR = 2;
 >> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
 ```
-
-
-## Executing the sequences on a GE scanner and loading the data
-
-
 
 
 ## Example 3: GE to Pulseq conversion (3D FLASH/SPGR/T1-FFE)

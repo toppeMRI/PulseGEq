@@ -82,12 +82,11 @@ Display the GE sequence:
 gre.tar contains multiple files that work together to define the execution of the MR sequence.
 A detailed description of these files can be found
 [here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
-
-A brief overview can be found on slide 2 of the 
+For a brief overview, see slide 2 of the 
 [slide deck](https://docs.google.com/presentation/d/1YsY_6vehFSnzAYg_EjwvA8p9BDq8BgcDjDCcX4gc5BE/edit?usp=sharing)
 for this presentation.
 
-To display the sequence in MATLAB, only the following files are needed:
+Note: to display the sequence in MATLAB, only the following files are needed:
 ```
 modules.txt
 scanloop.txt

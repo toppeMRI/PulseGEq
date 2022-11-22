@@ -83,6 +83,10 @@ gre.tar contains multiple files that work together to define the execution of th
 A detailed description of these files can be found
 [here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
 
+A brief overview can be found on slide 2 of the 
+[slide deck](https://docs.google.com/presentation/d/1YsY_6vehFSnzAYg_EjwvA8p9BDq8BgcDjDCcX4gc5BE/edit?usp=sharing)
+for this presentation.
+
 To display the sequence in MATLAB, only the following files are needed:
 ```
 modules.txt
@@ -134,6 +138,10 @@ For sites that use GE as their primary development platform,
 and that wish to also export the sequence to Siemens scanners,
 it may be a good option to first create a set of TOPPE files using the TOPPE MATLAB toolbox, 
 and then convert the sequence to Pulseq using `ge2seq.m`.
+
+For a detailed walk-through of pulse programming in TOPPE, see the 
+[slide deck](https://docs.google.com/presentation/d/1YsY_6vehFSnzAYg_EjwvA8p9BDq8BgcDjDCcX4gc5BE/edit?usp=sharing)
+for this presentation.
 
 
 ### Create the TOPPE sequence files (flash3d.tar)

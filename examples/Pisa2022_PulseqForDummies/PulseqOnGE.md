@@ -13,7 +13,7 @@ The reverse is also possible: a set of TOPPE scan files can be used to generate 
 corresponding .seq file.
 That conversion is exact.
 Thus, the TOPPE MATLAB toolbox can be viewed as an alternative set of tools for creating a .seq file
-(in addition to the 'official' Pulseq toolbox).
+(in addition to the 'official' Pulseq toolbox, `+mr`).
 
 Working with Pulseq on GE scanners requires the
 [PulseGEq](https://github.com/toppeMRI/PulseGEq)
@@ -24,23 +24,20 @@ MATLAB toolbox.
 
 ## Setup
 
-### Get the source code
+### Get the source code (Linux)
 
 To install the code needed to run the GE portion of this course, do:
 ```
-$ mkdir temp
-$ cd temp
-$ git clone  TODO (Pulseq, ...)
+$ git clone git@github.com:toppeMRI/PulseGEq.git
+$ cd PulseGEq; git checkout develop
+$ git clone git@github.com:toppeMRI/toppe.git
 ```
 
-### Enter the demo directory and set MATLAB path
+Add the `PulseGEq` and `toppe` directories to your MATLAB path.
 
+The code in this demo can be found in:
 ```
 $ cd PulseGEq/examples/Pisa2022_PulseqForDummies
-```
-
-```
->> setup;    % add the +mr, +pulsegeq, and +toppe toolboxes to the MATLAB path
 ```
 
 
@@ -60,18 +57,23 @@ Plot the .seq file:
 
 Convert gre.seq file to the 'TOPPE' file format:
 ```
+>> getsys  % or:
 >> sysGE = toppe.systemspecs('maxSlew', 20, 'slewUnit', 'Gauss/cm/ms', ...
-    'maxGrad', 5, 'gradUnit', 'Gauss/cm', ...
-    'gradient', 'xrm');                          % xrm: MR750; hrmb: UHP; hrmw: Premier
-
+        'maxGrad', 5, 'gradUnit', 'Gauss/cm', ...
+        'gradient', 'xrm');
 >> pulsegeq.seq2ge('gre.seq', sysGE, 'verbose', true, 'tarFile', 'gre.seq.tar');
 ```
 
 Display the GE sequence:
 ```
->> nModsPerTR = X;
+>> toppe.plotseq(1, 5, sysGE);
+>> nModsPerTR = 4;
 >> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.01);
 ```
+
+**Current limitations:**
+1. A gap (200-400us) is inserted after each Pulseq block.
+2. Within each block, the gradient waveforms on each axis must start and end with zero.
 
 
 ## GE (TOPPE) scan file structure and scan instructions
@@ -89,9 +91,13 @@ The function `toppe.utils.loadpfile` may be used to load P-files.
 
 ## Example 2: Pulseq to GE conversion (2D GRE), more efficient implementation
 
+Clean up TOPPE scan files from last example:
+```
+$ rm *.mod modules.txt scanloop.txt
+```
+
 Create a version of the previous sequence that contains fewer blocks:
 ```
-$ rm module1.mod module2.mod ...      % remove existing .mod files in working folder
 >> writeGradientEcho_4ge;             % creates gre_4ge.seq
 ```
 
@@ -124,6 +130,11 @@ and then convert the sequence to Pulseq using `ge2seq.m`.
 
 
 ### Create the TOPPE sequence files (flash3d.tar)
+
+Clean up TOPPE scan files from last example:
+```
+$ rm *.mod modules.txt scanloop.txt
+```
 
 ```
 >> writeflash3d;

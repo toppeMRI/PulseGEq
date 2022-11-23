@@ -41,6 +41,30 @@ $ cd PulseGEq/examples/Pisa2022_PulseqForDummies
 ```
 
 
+## GE (TOPPE) scan file structure and scan instructions
+
+gre.tar contains multiple files that work together to define the execution of the MR sequence.
+A detailed description of these files can be found
+[here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
+For a brief overview, see slide 2 of the 
+[slide deck](https://docs.google.com/presentation/d/1YsY_6vehFSnzAYg_EjwvA8p9BDq8BgcDjDCcX4gc5BE/edit?usp=sharing)
+for this presentation.
+
+Note: to display the sequence in MATLAB, only the following files are needed:
+```
+modules.txt
+scanloop.txt
+module (.mod) files 
+```
+
+Detailed scanning instructions can be found 
+[here](https://github.com/jfnielsen/TOPPEpsdSourceCode/) (private repository -- restricted to GE users).
+
+The acquired data is saved in either Pfiles and/or ScanArchive files, as with any vendor or custom sequence.
+The function `toppe.utils.loadpfile` may be used to load P-files.
+
+
+
 ## Example 1: Pulseq to GE conversion (2D GRE)
 
 Create the .seq file (gre.seq):
@@ -76,28 +100,6 @@ Display the GE sequence:
 1. A gap (200-400us) is inserted after each Pulseq block.
 2. Within each block, the gradient waveforms on each axis must start and end with zero.
 
-
-## GE (TOPPE) scan file structure and scan instructions
-
-gre.tar contains multiple files that work together to define the execution of the MR sequence.
-A detailed description of these files can be found
-[here](https://github.com/toppeMRI/toppe/blob/main/Files.md).
-For a brief overview, see slide 2 of the 
-[slide deck](https://docs.google.com/presentation/d/1YsY_6vehFSnzAYg_EjwvA8p9BDq8BgcDjDCcX4gc5BE/edit?usp=sharing)
-for this presentation.
-
-Note: to display the sequence in MATLAB, only the following files are needed:
-```
-modules.txt
-scanloop.txt
-module (.mod) files 
-```
-
-Detailed scanning instructions can be found 
-[here](https://github.com/jfnielsen/TOPPEpsdSourceCode/) (private repository -- restricted to GE users).
-
-The acquired data is saved in either Pfiles and/or ScanArchive files, as with any vendor or custom sequence.
-The function `toppe.utils.loadpfile` may be used to load P-files.
 
 
 ## Example 2: Pulseq to GE conversion (2D GRE), more efficient implementation

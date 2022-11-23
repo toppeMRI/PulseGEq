@@ -174,7 +174,7 @@ Display it:
     'FOV', FOV/100);                % m
 >> seq = mr.Sequence(sys);
 >> seq.read('flash3d.seq');
->> seq.plot('timeRange', [0 20e-3]);
+>> seq.plot('timeRange', [0 16e-3]);
 ```
 
 

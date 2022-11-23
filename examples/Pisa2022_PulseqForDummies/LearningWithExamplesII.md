@@ -5,7 +5,6 @@
 With Pulseq, we have complete knowledge of the MR sequence, which
 allows us to inspect and check the sequence before exporting it to the scanner.
 
-Here we give 
 
 
 ## Sequence analysis: slice profile
@@ -37,22 +36,15 @@ Example:
 ```
 
 
-## Handling RF power (SAR) and gradient heating
+## Sequence analysis: RF power (SAR) and gradient heating
 
 SAR can be estimated in advance (offline) by comparing the RF power 
 to a reference sequence with known SAR monitor reading for a certain patient weight.
 
-The gradient power can be calculated offline and entered into the
+Similarly, the gradient power can be calculated offline and entered into the
 interpreter's gradient heating checks.
 
 GE example:
 `toppe.preflightcheck()`
 
-
-
-## Non-cartesian imaging example: 3D stack of spirals
-
-stack of spirals, including fat saturation
-
-simulate spectral profile of fat sat pulse
 

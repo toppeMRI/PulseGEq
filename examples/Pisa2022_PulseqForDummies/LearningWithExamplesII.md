@@ -34,6 +34,8 @@ Example:
 >> pns;
 ```
 
+A related collection of papers can be found [here](https://www.sciencedirect.com/topics/neuroscience/chronaxie).
+
 Information about Siemens' SAFE model can be found
 [here](https://github.com/filip-szczepankiewicz/safe_pns_prediction).
 

@@ -54,4 +54,5 @@ interpreter's gradient heating checks.
 GE example:
 `toppe.preflightcheck()`
 
+See also the [sar4seq](https://github.com/imr-framework/sar4seq) Github repository (Geethanath et al).
 

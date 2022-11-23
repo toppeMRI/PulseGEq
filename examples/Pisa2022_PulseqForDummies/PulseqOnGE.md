@@ -29,8 +29,8 @@ MATLAB toolbox.
 To install the code needed to run the GE portion of this course, do:
 ```
 $ git clone git@github.com:toppeMRI/PulseGEq.git
-$ cd PulseGEq; git checkout develop
 $ git clone git@github.com:toppeMRI/toppe.git
+$ cd PulseGEq; git checkout develop
 ```
 
 Add the `PulseGEq` and `toppe` directories to your MATLAB path.

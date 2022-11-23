@@ -17,6 +17,7 @@ g = g1;
 toppe.writemod(sysGE, 'gz', g, 'ofname', 'tmp1.mod');
 toppe.plotmod('tmp1.mod', 'gradient', 'xrm', 'printPNS', true);
 
+
 % make it a multipolar gradient
 g = [g1; -g1];
 g = [g; g; g];

@@ -2,7 +2,7 @@
 % design sinc pulse
 alpha = 30;       % degrees
 slThick = 5e-3;   % m
-[rf, gz] = mr.makeSincPulse(alpha*pi/180, 'Duration',3e-3,...
+[rf30_sinc, gz] = mr.makeSincPulse(alpha*pi/180, 'Duration',3e-3,...
     'SliceThickness', slThick, 'apodization', 0.42, 'timeBwProduct', 4, 'system',sys);
 
 % simulate RF pulse (no gradients)
@@ -16,6 +16,7 @@ legend({'M_x_ySTA','M_x_ySIM','M_zSIM'});
 xlabel('frequency offset / Hz');
 ylabel('magnetisation');
 title('STA vs. simulation, flip angle 30°');
+
 
 % simulate RF pulse and gradients
 figure;

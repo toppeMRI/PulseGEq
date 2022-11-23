@@ -158,7 +158,7 @@ Display it:
 ```
 >> toppe.plotseq(1, 4, sysGE, 'gmax', 5, 'rhomax', 0.04);
 >> nModsPerTR = 2;
->> toppe.playseq(nModsperTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.04);
+>> toppe.playseq(nModsPerTR, sysGE, 'nTRskip', nModsPerTR, 'gmax', 3, 'rhomax', 0.04);
 ```
 
 (Code walk-through)

@@ -43,7 +43,7 @@ assert(all(delayTR>=mr.calcDuration(gxSpoil,gzSpoil)));
 rf_phase=0;
 rf_inc=0;
 
-% For GE: create 'composite' block containing pe encoding gradients, readout gradient, and spoiler gradient
+%% For GE: create 'composite' block containing pe encoding gradients, readout gradient, and spoiler gradient
 % First create dummy sequence
 c = 1;
 seq_d = mr.Sequence(sys);           % dummy sequence
@@ -73,6 +73,8 @@ gx_read = mr.makeArbitraryGrad('x', [0 wave_x 0]);
 gz_read = mr.makeArbitraryGrad('z', [0 wave_z 0]);
 
 %rf = mr.makeArbitraryRf(ex.signal, alpha/180*pi, 'system', sys);
+
+%% End of code adaptation for GE (except for scan loop)
 
 % Loop over phase encodes and define sequence blocks
 for i=1:Ny

@@ -154,8 +154,8 @@ for ii = 1:nt
 
     if module.hasRF
         if nChop(2) < ceil(systemSiemens.rfRingdownTime/raster)
-            %error(sprintf('%s: RF ringdown occurs past end of gradient -- increase nChop(2)', module.fname));
-            nChop(2) = 48;
+            error(sprintf('%s: RF ringdown occurs past end of gradient -- increase nChop(2)', module.fname));
+            %nChop(2) = 48;
             %warning(sprintf('%s: RF ringdown occurs past end of gradient -- nChop(2) set to 48 samples', module.fname));
         end
 

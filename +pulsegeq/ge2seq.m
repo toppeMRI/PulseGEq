@@ -104,6 +104,14 @@ for ii = 1:nt
     gywav = d(ii,5)/max_pg_iamp*(module.gy(:,1))';
     gzwav = d(ii,6)/max_pg_iamp*(module.gz(:,1))';
 
+    % apply 3d rotation 
+    Rv = d(ii,17:25)/max_pg_iamp;  % stored in row-major order
+    R = reshape(Rv, 3, 3);
+    G = R * [gxwav(:)'; gywav(:)'; gzwav(:)'];
+    gxwav = G(1,:);
+    gywav = G(2,:);
+    gzwav = G(3,:);
+
     % convert to Pulseq units
     % rf:   Hz
     % grad: Hz/m

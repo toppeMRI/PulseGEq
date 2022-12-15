@@ -291,21 +291,24 @@ for ii = 1:nt
 end
 fprintf('\n');
 
+a = input('Check Pulseq timing? (may take a long time)', 's');
 
-%% Check sequence timing and write to file
-fprintf('Checking Pulseq timing... ');
-[ok, error_report]=seq.checkTiming;
-if (ok)
-    if ~isempty(arg.FOV)
-        seq.setDefinition('FOV', arg.FOV);
+if strcmp(a, 'y')
+    %% Check sequence timing and write to file
+    fprintf('Checking Pulseq timing... ');
+    [ok, error_report]=seq.checkTiming;
+    if (ok)
+        if ~isempty(arg.FOV)
+            seq.setDefinition('FOV', arg.FOV);
+        end
+        seq.setDefinition('Name', arg.name);
+        seq.write(arg.seqFile);
+        fprintf('Timing check passed successfully\n');
+    else
+        fprintf('Timing check failed! Error listing follows:\n');
+        fprintf([error_report{:}]);
+        fprintf('\n');
     end
-    seq.setDefinition('Name', arg.name);
-    seq.write(arg.seqFile);
-    fprintf('Timing check passed successfully\n');
-else
-    fprintf('Timing check failed! Error listing follows:\n');
-    fprintf([error_report{:}]);
-    fprintf('\n');
 end
 
 %rep = seq.testReport;

@@ -291,7 +291,7 @@ for ii = 1:nt
 end
 fprintf('\n');
 
-a = input('Check Pulseq timing? (may take a long time)', 's');
+a = 'y'; %input('Check Pulseq timing? (may take a long time)', 's');
 
 if strcmp(a, 'y')
     %% Check sequence timing and write to file

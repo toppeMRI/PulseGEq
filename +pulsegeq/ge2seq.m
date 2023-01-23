@@ -98,11 +98,14 @@ for ii = 1:nt
     % get number of discarded samples at beginning+end of RF waveform / ADC window
     nChop = [module.npre  module.res - module.rfres - module.npre];
 
+    % get waveform index
+    iwav = loopArr(it,16); % waveform index
+
     % get scaled waveforms (as row vectors)
     rfwav = (module.rf(:,1)).';  % full scale -- scaling done in makeArbitraryRf call
-    gxwav = d(ii,4)/max_pg_iamp*(module.gx(:,1))';
-    gywav = d(ii,5)/max_pg_iamp*(module.gy(:,1))';
-    gzwav = d(ii,6)/max_pg_iamp*(module.gz(:,1))';
+    gxwav = d(ii,4)/max_pg_iamp*(module.gx(:, iwav))';
+    gywav = d(ii,5)/max_pg_iamp*(module.gy(:, iwav))';
+    gzwav = d(ii,6)/max_pg_iamp*(module.gz(:, iwav))';
 
     % apply 3d rotation 
     Rv = d(ii,17:25)/max_pg_iamp;  % stored in row-major order

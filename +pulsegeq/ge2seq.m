@@ -99,7 +99,7 @@ for ii = 1:nt
     nChop = [module.npre  module.res - module.rfres - module.npre];
 
     % get waveform index
-    iwav = loopArr(it,16); % waveform index
+    iwav = d(ii,16); % waveform index
 
     % get scaled waveforms (as row vectors)
     rfwav = (module.rf(:,1)).';  % full scale -- scaling done in makeArbitraryRf call

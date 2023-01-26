@@ -1,5 +1,10 @@
 function rfout = rf2pulseq(rf,geRasterTime,seq)
+% function rfout = rf2pulseq(rf,geRasterTime,seq)
 % convert rf units from Gauss to Hz, and interpolate to seq.rfRasterTime
+%
+% rf             [n 1]  RF waveform, Gauss
+% geRasterTime   [1]   sec
+% seq            Pulseq object. Only seq.rfRasterTime is used.
 gamma = 4.2576e3;       % Hz/G
 rf = rf*gamma;       % Hz
 T = numel(rf)*geRasterTime;   % pulse duration

@@ -30,7 +30,9 @@ if ~isempty(block.rf)
     %module.ofname = 'tipdown.mod';
 
     % interpolate to GE raster time (4us)
-    rf = downsample(block.rf.signal, round(dt/1e-6));     % downsample from 1us to 4us (GE raster time)
+    %rf = downsample(block.rf.signal, round(dt/1e-6));     % downsample from 1us to 4us (GE raster time)
+    tge = block.rf.t(1) : system.raster : block.rf.t(end);
+    rf = interp1(block.rf.t, block.rf.signal, tge);     % downsample from 1us to 4us (GE raster time)
     %if ( length(block.rf.signal) > 24 )
     %else
     %   rf = block.rf.signal;                               % assumed to be already decimated in terms of dt_ge
@@ -38,7 +40,7 @@ if ~isempty(block.rf)
     %end
 
     % add delay
-    rf = [linspace(0, 0, round(block.rf.delay/dt))'; rf];
+    rf = [linspace(0, 0, round(block.rf.delay/dt))'; rf.'];
 
     % Normalize and add to waveforms (loopStructArr array will contain rf amplitude for each block)
     rf = rf/max(abs(rf(:)));

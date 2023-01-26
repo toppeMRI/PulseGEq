@@ -1,5 +1,5 @@
 function seq = ge2seq(toppeTarFile, systemGE, systemSiemens, varargin)
-% function seq = ge2seq(toppeTarFile, varargin)
+% function seq = ge2seq(toppeTarFile, systemGE, systemSiemens, varargin)
 %
 % TOPPE to Pulseq file conversion.
 %
@@ -98,15 +98,27 @@ for ii = 1:nt
     % get number of discarded samples at beginning+end of RF waveform / ADC window
     nChop = [module.npre  module.res - module.rfres - module.npre];
 
+    % get waveform index
+    iwav = d(ii,16); % waveform index
+
     % get scaled waveforms (as row vectors)
-    rfwav = (module.rf).';  % full scale -- scaling done in makeArbitraryRf call
-    gxwav = d(ii,4)/max_pg_iamp*(module.gx)';
-    gywav = d(ii,5)/max_pg_iamp*(module.gy)';
-    gzwav = d(ii,6)/max_pg_iamp*(module.gz)';
+    rfwav = (module.rf(:,1)).';  % full scale -- scaling done in makeArbitraryRf call
+    gxwav = d(ii,4)/max_pg_iamp*(module.gx(:, iwav))';
+    gywav = d(ii,5)/max_pg_iamp*(module.gy(:, iwav))';
+    gzwav = d(ii,6)/max_pg_iamp*(module.gz(:, iwav))';
+
+    % apply 3d rotation 
+    Rv = d(ii,17:25)/max_pg_iamp;  % stored in row-major order
+    R = reshape(Rv, 3, 3);
+    G = R * [gxwav(:)'; gywav(:)'; gzwav(:)'];
+    gxwav = G(1,:);
+    gywav = G(2,:);
+    gzwav = G(3,:);
 
     % convert to Pulseq units
     % rf:   Hz
     % grad: Hz/m
+    %if ii==258; keyboard;  end;
     rfwavPulseq = rf2pulseq(rfwav,raster,seq);
     gxwavPulseq = g2pulseq( gxwav,raster,seq);
     gywavPulseq = g2pulseq( gywav,raster,seq);
@@ -154,6 +166,8 @@ for ii = 1:nt
     if module.hasRF
         if nChop(2) < ceil(systemSiemens.rfRingdownTime/raster)
             error(sprintf('%s: RF ringdown occurs past end of gradient -- increase nChop(2)', module.fname));
+            %nChop(2) = 48;
+            %warning(sprintf('%s: RF ringdown occurs past end of gradient -- nChop(2) set to 48 samples', module.fname));
         end
 
         phaseOffset = d(ii,12)/max_pg_iamp*pi;  % radians
@@ -171,7 +185,7 @@ for ii = 1:nt
 
         % rf object
         iStart = 1 + round(nChop(1)*raster / systemSiemens.rfRasterTime);
-        iStop = round( (length(rfwav) - sum(nChop))*raster / systemSiemens.rfRasterTime);
+        iStop = iStart - 1 + round( (length(rfwav) - sum(nChop))*raster / systemSiemens.rfRasterTime);
         rf = mr.makeArbitraryRf(rfwavPulseq(iStart:iStop), flipScaling*nominalFlip, ...
             'PhaseOffset', phaseOffset, ...
             'FreqOffset', freqOffset, ...
@@ -280,21 +294,24 @@ for ii = 1:nt
 end
 fprintf('\n');
 
+a = 'y'; %input('Check Pulseq timing? (may take a long time)', 's');
 
-%% Check sequence timing and write to file
-fprintf('Checking Pulseq timing... ');
-[ok, error_report]=seq.checkTiming;
-if (ok)
-    if ~isempty(arg.FOV)
-        seq.setDefinition('FOV', arg.FOV);
+if strcmp(a, 'y')
+    %% Check sequence timing and write to file
+    fprintf('Checking Pulseq timing... ');
+    [ok, error_report]=seq.checkTiming;
+    if (ok)
+        if ~isempty(arg.FOV)
+            seq.setDefinition('FOV', arg.FOV);
+        end
+        seq.setDefinition('Name', arg.name);
+        seq.write(arg.seqFile);
+        fprintf('Timing check passed successfully\n');
+    else
+        fprintf('Timing check failed! Error listing follows:\n');
+        fprintf([error_report{:}]);
+        fprintf('\n');
     end
-    seq.setDefinition('Name', arg.name);
-    seq.write(arg.seqFile);
-    fprintf('Timing check passed successfully\n');
-else
-    fprintf('Timing check failed! Error listing follows:\n');
-    fprintf([error_report{:}]);
-    fprintf('\n');
 end
 
 %rep = seq.testReport;

@@ -1,5 +1,5 @@
-function [moduleArr loopStructArr] = seq2ge(seqarg, sys, varargin)
-% function seq2ge(seqarg, sys, varargin)
+function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
+% function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
 %
 % Convert a Pulseq file (http://pulseq.github.io/) to a set of TOPPE files
 % that can be executed on GE MR scanners. 
@@ -13,19 +13,25 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, sys, varargin)
 %
 % Inputs:
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
-%   sys               struct        Contains GE and TOPPE system specs, including TOPPE version. See +toppe/systemspecs.m
+%   systemGE          struct        Contains scanner hardware and TOPPE-specific specs. See +toppe/systemspecs.m
 % Input options:
 %   toppeVersion      string        'v4' (default) or 'v3'
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   tarFile           string        default: 'toppeScanFiles.tar'
 %   blockStop         int           end at this block in the .seq file (for testing)
+%   nt                 Only step through the first nt rows in scanloop.txt. Default: all rows.
 %
-% Usage example:
-%   >> sys = toppe.systemspecs('maxSlew',20,'maxGrad',50');  % units: G/cm/ms and G/cm
+% Usage examples:
+%   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
+%   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
+%
+%   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
+%   >> seq2ge('2DFLASH.seq', 'system', system, 'verbose', true);
+%
 %   >> seq = mr.Sequence();
 %   >> seq.read('2DFLASH.seq');
-%   >> seq2ge(seq, sys, 'verbose', true);
+%   >> seq2ge(seq, 'system', system);
 %
 
 %import pulsegeq.*
@@ -38,7 +44,8 @@ arg.debug = false;
 arg.pulseqVersion = 'v1.4.0';
 arg.tarFile = 'toppeScanFiles.tar';
 arg.blockStop = [];
-arg.ibstart = 1;
+arg.ibstart = 1;    % skip the first (ibstart-1) events (for testing)
+arg.nt      = [];
 
 %  systemSiemens      struct containing Siemens system specs. 
 %                        .rfRingdownTime     Default: 30e-6   (sec)
@@ -108,13 +115,20 @@ if ~isempty(arg.blockStop)
     blockEvents = blockEvents(1:arg.blockStop, :);
 end
 
+% set number of blocks (rows in .seq file) to step through
+if isempty(arg.nt)
+    nt = size(blockEvents, 1);
+else
+    nt = arg.nt;
+end
+
 % First entry in 'moduleArr' struct array
 block = seq.getBlock(arg.ibstart);
-moduleArr(1) = pulsegeq.sub_block2module(block, arg.ibstart, sys, 1);
+moduleArr(1) = pulsegeq.sub_block2module(block, arg.ibstart, systemGE, 1);
 
 % First entry in 'loopStructArr' struct array (first block is by definition a module)
 nextblock = seq.getBlock(arg.ibstart+1);   % needed to set 'textra' in scanloop.txt
-loopStructArr(1) = pulsegeq.sub_updateloopstruct([], block, nextblock, sys, 'mod', 1);
+loopStructArr(1) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, 'mod', 1);
 
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
 sl = 1;
@@ -123,7 +137,7 @@ echo = 0;
 adcCount = 0;
 
 % h = waitbar(0,'Looping through blocks and looking for uniqueness...');
-for ib = (arg.ibstart+1):size(blockEvents,1)
+for ib = (arg.ibstart+1):nt
     if ~mod(ib, 500)
     %   waitbar(ib/size(blockEvents,1),h)
         for inb = 1:20
@@ -140,14 +154,14 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
     else
         nextblock = [];
     end
-    if isfield(nextblock, 'trig') 
-        nextblock = [];
-    end
+%    if isfield(nextblock, 'trig') 
+%        nextblock = [];
+%    end
 
     % Empty (pure delay) blocks are accounted for in 'textra' in the previous row in scanloop.txt
     if isempty(block.rf) & isempty(block.adc) ...
-        & isempty(block.gx) & isempty(block.gy) & isempty(block.gz) ...
-        | isfield(block, 'trig')  % ignore trigger (ext) blocks for now. TODO
+        & isempty(block.gx) & isempty(block.gy) & isempty(block.gz) % ...
+        %| isfield(block, 'trig')  % ignore trigger (ext) blocks for now. TODO
         continue;  % Done, move on to next block 
     end
 
@@ -155,14 +169,14 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
     % view = 1, ..., system.maxView
     % sl   = 1, ..., system.maxSlice
     if ~isempty(block.adc)
-        view = mod(adcCount, sys.maxView) + 1;
-        sl   = floor(adcCount/sys.maxView) + 1;
-        if sl > sys.maxSlice;
-            error(sprintf('max number of slices ecxeeded (%d)', sys.maxSlice));
+        view = mod(adcCount, systemGE.maxView) + 1;
+        sl   = floor(adcCount/systemGE.maxView) + 1;
+        if sl > systemGE.maxSlice;
+            error(sprintf('max number of slices ecxeeded (%d)', systemGE.maxSlice));
         end
-        echo = floor(adcCount/(sys.maxView*sys.maxSlice));
-        if echo > sys.maxEcho
-            error(sprintf('max number of echoes ecxeeded (%d)', sys.maxEcho));
+        echo = floor(adcCount/(systemGE.maxView*systemGE.maxSlice));
+        if echo > systemGE.maxEcho
+            error(sprintf('max number of echoes ecxeeded (%d)', systemGE.maxEcho));
         end
         %fprintf('ib: %d, view: %d, sl: %d, echo: %d\n', ib, view, sl, echo);
 
@@ -170,7 +184,7 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
     end
 
     % create a TOPPE module struct from current Pulseq block
-    modCandidate = pulsegeq.sub_block2module(block, ib, sys, length(moduleArr) + 1);
+    modCandidate = pulsegeq.sub_block2module(block, ib, systemGE, length(moduleArr) + 1);
 
     % Is there an existing module that can be 'reused'?
     % Specifically, does one of the existing modules (elements of moduleArr) have the same length waveform, 
@@ -196,7 +210,7 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
             fprintf('\tFound new module at block %d\n', ib);
         end
         moduleArr(end+1) = modCandidate;
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, sys, ...
+        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(moduleArr));
         continue; % done, so move on to next block
     end
@@ -231,12 +245,12 @@ for ib = (arg.ibstart+1):size(blockEvents,1)
         % We found a set of RF/gradient waveforms in modularArr(ic) with the same shapes as those in modCandidate,
         % so we'll 'reuse' that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
         iWavReuse = I(1);
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, sys, ...
+        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', iWavReuse);
     else
         % Found a new set of shapes, so add this waveform set to moduleArr(ic)
-        moduleArr(ic) = pulsegeq.sub_updatemodule(moduleArr(ic), block, ib, sys);
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, sys, ... 
+        moduleArr(ic) = pulsegeq.sub_updatemodule(moduleArr(ic), block, ib, systemGE);
+        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ... 
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', moduleArr(ic).npulses);
     end
 
@@ -375,7 +389,7 @@ for ic = 1:length(moduleArr)
 
     try
         warning('off');    % don't show message about padding waveforms
-        toppe.writemod(sys, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', moduleArr(ic).ofname); 
+        toppe.writemod(systemGE, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', moduleArr(ic).ofname); 
         warning('on');
     catch ME
         error(sprintf('Error in writemod:\n%s', ME.message));
@@ -401,7 +415,7 @@ end
 % load .mod files
 mods = toppe.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
-toppe.write2loop('setup', sys, 'version', str2num(arg.toppeVersion(2))); 
+toppe.write2loop('setup', systemGE, 'version', str2num(arg.toppeVersion(2))); 
 
 for ib = 1:length(loopStructArr)
 
@@ -464,7 +478,7 @@ for ib = 1:length(loopStructArr)
     end
 
     %toppe.write2loop(sprintf('module%d.mod',iMod), ...
-    toppe.write2loop(moduleArr(iMod).ofname, sys, ...
+    toppe.write2loop(moduleArr(iMod).ofname, systemGE, ...
         'Gamplitude',  Gamplitude, ...
         'waveform',    iWav, ...
         'RFamplitude', RFamplitude, ...
@@ -485,7 +499,7 @@ if textraWarning
         ' ''textra'' set to zero in one or more scanloop.txt entries.\n']);
 end
 
-toppe.write2loop('finish', sys);
+toppe.write2loop('finish', systemGE);
 
 if arg.verbose
     fprintf(' done\n');

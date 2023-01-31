@@ -109,7 +109,7 @@ for ii = 1:nt
 
     % apply 3d rotation 
     Rv = d(ii,17:25)/max_pg_iamp;  % stored in row-major order
-    R = reshape(Rv, 3, 3);
+    R = reshape(Rv, 3, 3)';
     G = R * [gxwav(:)'; gywav(:)'; gzwav(:)'];
     gxwav = G(1,:);
     gywav = G(2,:);

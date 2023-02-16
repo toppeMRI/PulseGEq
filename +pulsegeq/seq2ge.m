@@ -56,17 +56,6 @@ arg.nt      = [];
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = toppe.utils.vararg_pair(arg, varargin);
 
-switch arg.toppeVersion
-    case 'v2' 
-        nCols = 16;   % number of columns in scanloop.txt
-    case 'v3' 
-        nCols = 25;   % number of columns in scanloop.txt
-    case 'v4' 
-        nCols = 26;   % number of columns in scanloop.txt
-    otherwise
-        error('Please use TOPPE >= v2');
-end
-
 switch arg.pulseqVersion
     case 'v1.2.1'
         nEvents = 6;   % number of events per block (number of columns in .seq file)
@@ -98,7 +87,8 @@ end
 % and fill 'moduleArr' struct array accordingly. 
 % Each entry of 'moduleArr' is a struct containing all waveforms belonging to one module (.mod file), and other module info.
 % The usage of the word "module" here is consistent with its usage in TOPPE.
-% For now, ignore 'EXT' blocks (TODO)
+% For now, the 'EXT' event ID (last column in event table) marks the beginning
+% of a 'block group' -- this information is used by the GE interpreter.
 
 % 'loopStructArr' struct array
 % Each entry in this array contains information needed to fill out one row of scanloop.txt.
@@ -500,6 +490,23 @@ if textraWarning
 end
 
 toppe.write2loop('finish', systemGE);
+
+% Write cores.txt, which defines the block groups
+blockGroups = [];
+ig = 1;  % block group counter
+ie = 1;  % event (row in .seq file) counter
+blockGroups{ig} = loopStructArr(ie).mod;  % by definition, the first block belongs to the first block group
+while ie < length(loopStructArr)
+    ie = ie + 1;
+    gid = loopStructArr(ie).blockGroupID;
+    if isempty(gid)
+        blockGroups(ig) = {[blockGroups{ig} loopStructArr(ie).mod]};
+    elseif gid > length(blockGroups)
+        ig = ig + 1;
+        blockGroups(ig) = {[loopStructArr(ie).mod]};
+    end
+end
+keyboard
 
 if arg.verbose
     fprintf(' done\n');

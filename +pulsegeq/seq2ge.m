@@ -118,7 +118,7 @@ echo = 0;
 adcCount = 0;
 
 for ib = (arg.ibstart+1):nt
-    if ~mod(ib, 500)
+    if ~mod(ib, 500) | ib == nt
         for inb = 1:20
             fprintf('\b');
         end
@@ -525,6 +525,15 @@ for ic = 1:length(moduleArr)
     system(sprintf('tar rf %s %s', arg.tarFile, moduleArr(ic).ofname));
 end
 
+% clean up
+system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt');
+if arg.toppeVersion > 5
+    system('rm cores.txt');
+end
+for ic = 1:length(moduleArr)
+    system(sprintf('rm %s', moduleArr(ic).ofname));
+end
+
 if arg.verbose
     fprintf(' done\n');
 end
@@ -536,12 +545,6 @@ return;
 if arg.verbose
     fprintf('\nCreated %s containing the following files:\n', arg.tarFile);
     system(sprintf('tar tf %s', arg.tarFile));
-end
-
-% clean up
-system('rm modules.txt scanloop.txt seqstamp.txt toppeN.entry');
-for ic = 1:length(moduleArr)
-    system(sprintf('rm %s', moduleArr(ic).ofname));
 end
 
 if ~arg.verbose

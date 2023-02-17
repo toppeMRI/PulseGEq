@@ -493,20 +493,18 @@ toppe.write2loop('finish', systemGE);
 
 % Write cores.txt, which defines the block groups
 blockGroups = [];
-ig = 1;  % block group counter
-ie = 1;  % event (row in .seq file) counter
-blockGroups{ig} = loopStructArr(ie).mod;  % by definition, the first block belongs to the first block group
-while ie < length(loopStructArr)
-    ie = ie + 1;
-    gid = loopStructArr(ie).blockGroupID;
-    if isempty(gid)
-        blockGroups(ig) = {[blockGroups{ig} loopStructArr(ie).mod]};
-    elseif gid > length(blockGroups)
-        ig = ig + 1;
-        blockGroups(ig) = {[loopStructArr(ie).mod]};
+for ie=1:length(loopStructArr)
+    bgID = loopStructArr(ie).blockGroupID;
+    modID = loopStructArr(ie).mod;
+    if ~isempty(bgID)
+        % start of group (will simply overwrite if already existing)
+        blockGroups{bgID} = modID;
+        bgIDcurrent = bgID;
+    else
+        blockGroups{bgIDcurrent} = [blockGroups{bgIDcurrent} modID];
     end
 end
-keyboard
+toppe.writecoresfile(blockGroups);
 
 if arg.verbose
     fprintf(' done\n');

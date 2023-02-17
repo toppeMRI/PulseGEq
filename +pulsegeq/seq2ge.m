@@ -17,7 +17,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
 %   systemGE          struct        Contains scanner hardware and TOPPE-specific specs. See +toppe/systemspecs.m
 % Input options:
-%   toppeVersion      string        'v4' (default) or 'v3'
+%   toppeVersion      string/int    Default is 'v5'/'5'/5 (default) 
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   tarFile           string        default: 'toppeScanFiles.tar'
@@ -32,7 +32,7 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
 
 %% parse inputs
 % Defaults
-arg.toppeVersion = 'v5';
+arg.toppeVersion = 5;
 arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.4.0';
@@ -43,6 +43,11 @@ arg.nt      = [];
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = toppe.utils.vararg_pair(arg, varargin);
+
+arg.toppeVersion = arg.toppeVersion(end);
+if ischar(arg.toppeVersion)
+    arg.toppeVersion = str2num(arg.toppeVersion);
+end
 
 switch arg.pulseqVersion
     case 'v1.2.1'
@@ -389,7 +394,7 @@ end
 % load .mod files
 mods = toppe.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
-toppe.write2loop('setup', systemGE, 'version', str2num(arg.toppeVersion(2))); 
+toppe.write2loop('setup', systemGE, 'version', arg.toppeVersion); 
 
 for ib = 1:length(loopStructArr)
 
@@ -475,20 +480,22 @@ end
 
 toppe.write2loop('finish', systemGE);
 
-% Write cores.txt, which defines the block groups
-blockGroups = [];
-for ie=1:length(loopStructArr)
-    bgID = loopStructArr(ie).blockGroupID;
-    modID = loopStructArr(ie).mod;
-    if ~isempty(bgID)
-        % start of group (will simply overwrite if already existing)
-        blockGroups{bgID} = modID;
-        bgIDcurrent = bgID;
-    else
-        blockGroups{bgIDcurrent} = [blockGroups{bgIDcurrent} modID];
+if arg.toppeVersion > 5
+    % Write cores.txt, which defines the block groups
+    blockGroups = [];
+    for ie=1:length(loopStructArr)
+        bgID = loopStructArr(ie).blockGroupID;
+        modID = loopStructArr(ie).mod;
+        if ~isempty(bgID)
+            % start of group (will simply overwrite if already existing)
+            blockGroups{bgID} = modID;
+            bgIDcurrent = bgID;
+        else
+            blockGroups{bgIDcurrent} = [blockGroups{bgIDcurrent} modID];
+        end
     end
+    toppe.writecoresfile(blockGroups);
 end
-toppe.writecoresfile(blockGroups);
 
 % Write TOPPE .entry file.
 % This can be edited by hand as needed after copying to scanner.
@@ -510,7 +517,10 @@ toppe.writeentryfile('toppeN.entry', ...
 toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', systemGE);
 
 % Put TOPPE files in a .tar file (for convenience)
-system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', arg.tarFile));
+system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt', arg.tarFile));
+if arg.toppeVersion > 5
+    system(sprintf('tar rf %s %s', arg.tarFile, 'cores.txt'));
+end
 for ic = 1:length(moduleArr)
     system(sprintf('tar rf %s %s', arg.tarFile, moduleArr(ic).ofname));
 end

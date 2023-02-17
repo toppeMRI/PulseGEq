@@ -6,9 +6,11 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
 %
 % See https://toppemri.github.io/ for more info on TOPPE.
 %
-% This script writes the following files to disk:
+% This script writes the following files to disk
+%   seqstamp.txt
 %   *.mod:            One .mod file corresponds to one "unique" block (see below)
-%   modules.txt       List of .mod files, and flags indicating whether each .mod file corresponds to an RF/ADC/(gradients only) module
+%   modules.txt       List of .mod files, and flags indicating whether each .mod file 
+%                     corresponds to an RF/ADC/(gradients only) module
 %   scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
 %
 % Inputs:
@@ -22,23 +24,15 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
 %   blockStop         int           end at this block in the .seq file (for testing)
 %   nt                 Only step through the first nt rows in scanloop.txt. Default: all rows.
 %
-% Usage examples:
-%   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
-%   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
-%
-%   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
-%   >> seq2ge('2DFLASH.seq', 'system', system, 'verbose', true);
-%
+% Usage example:
 %   >> seq = mr.Sequence();
 %   >> seq.read('2DFLASH.seq');
-%   >> seq2ge(seq, 'system', system);
-%
-
-%import pulsegeq.*
+%   >> sys = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
+%   >> seq2ge('2DFLASH.seq', sys, 'toppeVersion', 'v6', 'verbose', true);
 
 %% parse inputs
 % Defaults
-arg.toppeVersion = 'v4';
+arg.toppeVersion = 'v5';
 arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.4.0';
@@ -47,23 +41,13 @@ arg.blockStop = [];
 arg.ibstart = 1;    % skip the first (ibstart-1) events (for testing)
 arg.nt      = [];
 
-%  systemSiemens      struct containing Siemens system specs. 
-%                        .rfRingdownTime     Default: 30e-6   (sec)
-%                        .rfDeadTime         Default: 100e-6  (sec)
-%                        .adcDeadTime        Default: 20e-6   (sec)
-%arg.systemSiemens = struct('rfRingdownTime', 30e-6, 'rfDeadTime', 100e-6,'adcDeadTime', 20e-6);
-
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = toppe.utils.vararg_pair(arg, varargin);
 
 switch arg.pulseqVersion
     case 'v1.2.1'
         nEvents = 6;   % number of events per block (number of columns in .seq file)
-    case 'v1.3.0'
-        nEvents = 7;
-    case 'v1.3.1'
-        nEvents = 7;
-    case 'v1.4.0'
+    case {'v1.3.0', 'v1.3.1', 'v1.4.0'}
         nEvents = 7;
     otherwise
         error(sprintf('Pulseq version %s is not supported', arg.pulseqVersion));
@@ -83,9 +67,11 @@ end
 %% Loop through blocks and build 'moduleArr' and 'loopStructArr'
 
 % 'moduleArr' struct array
-% Find blocks that are unique in terms of waveforms and timing (i.e., waveform amplitudes, RF/ADC phase, etc can differ),
+% Find blocks that are unique in terms of waveforms and timing 
+% (i.e., waveform amplitudes, RF/ADC phase, etc can differ),
 % and fill 'moduleArr' struct array accordingly. 
-% Each entry of 'moduleArr' is a struct containing all waveforms belonging to one module (.mod file), and other module info.
+% Each entry of 'moduleArr' is a struct containing all waveforms 
+% belonging to one module (.mod file), and other module info.
 % The usage of the word "module" here is consistent with its usage in TOPPE.
 % For now, the 'EXT' event ID (last column in event table) marks the beginning
 % of a 'block group' -- this information is used by the GE interpreter.
@@ -126,10 +112,8 @@ view = 1;
 echo = 0; 
 adcCount = 0;
 
-% h = waitbar(0,'Looping through blocks and looking for uniqueness...');
 for ib = (arg.ibstart+1):nt
     if ~mod(ib, 500)
-    %   waitbar(ib/size(blockEvents,1),h)
         for inb = 1:20
             fprintf('\b');
         end
@@ -176,9 +160,10 @@ for ib = (arg.ibstart+1):nt
     % create a TOPPE module struct from current Pulseq block
     modCandidate = pulsegeq.sub_block2module(block, ib, systemGE, length(moduleArr) + 1);
 
-    % Is there an existing module that can be 'reused'?
-    % Specifically, does one of the existing modules (elements of moduleArr) have the same length waveform, 
-    % the same non-empty rf/gx/gy/gz, and the same value of 'hasADC', as modCandidate?
+    % Is there an existing module that can be reused (scaled)?
+    % Specifically, does one of the existing modules (elements of moduleArr) have 
+    % the same length waveform, the same non-empty rf/gx/gy/gz, 
+    % and the same value of 'hasADC', as modCandidate?
     isUnique = 1; 
     for ic = 1:length(moduleArr)
         if (moduleArr(ic).nt == modCandidate.nt ...
@@ -209,7 +194,6 @@ for ib = (arg.ibstart+1):nt
     % so now check to see if all waveform shapes in modCandidate match those in moduleArr(ic).
 
     tol = 1e-3;  % Shape is deemed equal if sum(abs(difference)) < tol
-
     ii = 1;
     isSameShape = [];
     for ax = {'rf','gx','gy','gz'};
@@ -233,7 +217,7 @@ for ib = (arg.ibstart+1):nt
     I = find(res==1);
     if ~isempty(I)
         % We found a set of RF/gradient waveforms in modularArr(ic) with the same shapes as those in modCandidate,
-        % so we'll 'reuse' that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
+        % so we'll reuse that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
         iWavReuse = I(1);
         loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', iWavReuse);
@@ -400,7 +384,7 @@ if arg.verbose
 end
 
 
-%% Write scanloop.txt, which specifices the scan sequence (along with modules.txt and the .mod files).
+%% Write scanloop.txt, which specifies the scan sequence (along with modules.txt and the .mod files).
 
 % load .mod files
 mods = toppe.tryread(@toppe.readmodulelistfile, 'modules.txt');

@@ -32,6 +32,7 @@ if isempty(arg)
     arg.rffreq = 0;          % RF transmit frequency offset (Hz)
     arg.wavnum = 1;          % waveform number (rf/grad waveform array column index). Non-zero positive integer.
     arg.rotmat = eye(3);     % 3x3 rotation matrix (added to toppev3)
+    arg.blockGroupID = [];
 end
 
 % Substitute specified system values as appropriate
@@ -42,10 +43,10 @@ if ~isempty(block)
     % Determine textra. See UserGuide/figs/timing.svg
     if ~isempty(block.rf) 
         start_core = system.start_core_rf;    % Earliest start of waveform (us).
-        delpre = system.myrfdel;   % Gradient delay w.r.t. RF waveform (us)
+        delpre = system.psd_rf_wait;   % Gradient delay w.r.t. RF waveform (us)
     elseif ~isempty(block.adc) 
         start_core = system.start_core_daq;   % data acquisition module
-        delpre = system.daqdel; % Gradient delay w.r.t. ADC window (us)
+        delpre = system.psd_grd_wait; % Gradient delay w.r.t. ADC window (us)
     else
         start_core = system.start_core_grad;  % only gradients
         delpre = 0;
@@ -55,6 +56,11 @@ if ~isempty(block)
     tmp = pulsegeq.sub_block2module(block, 1, system, 1);
     wavdur = tmp.nt*system.raster;  % waveform duration (s)
     arg.textra = max(0, block.blockDuration - wavdur - (start_core + delpre + timetrwait + timessi)*1e-6);   % s
+
+    % Set block group id
+    if isfield(block, 'label')
+        arg.blockGroupID = block.label.value;
+    end
 
     % if next block is a delay block, add duration to textra
     if ~isempty(nextblock) 

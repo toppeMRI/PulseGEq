@@ -6,39 +6,33 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
 %
 % See https://toppemri.github.io/ for more info on TOPPE.
 %
-% This script writes the following files to disk:
+% This script writes the following files to disk
+%   seqstamp.txt
 %   *.mod:            One .mod file corresponds to one "unique" block (see below)
-%   modules.txt       List of .mod files, and flags indicating whether each .mod file corresponds to an RF/ADC/(gradients only) module
+%   modules.txt       List of .mod files, and flags indicating whether each .mod file 
+%                     corresponds to an RF/ADC/(gradients only) module
 %   scanloop.txt      Sequence of instructions for the entire scan (waveform amplitudes, ADC instructions, etc)
 %
 % Inputs:
 %   seqarg            Either a Pulseq file name, or an mr.Sequence object.
 %   systemGE          struct        Contains scanner hardware and TOPPE-specific specs. See +toppe/systemspecs.m
 % Input options:
-%   toppeVersion      string        'v4' (default) or 'v3'
+%   toppeVersion      string/int    Default is 'v5'/'5'/5 (default) 
 %   verbose           boolean       Default: false
 %   debug             boolean       Display detailed info about progress (default: false)
 %   tarFile           string        default: 'toppeScanFiles.tar'
 %   blockStop         int           end at this block in the .seq file (for testing)
 %   nt                 Only step through the first nt rows in scanloop.txt. Default: all rows.
 %
-% Usage examples:
-%   >> seq2ge('../examples/2DFLASH.seq', 'toppeVersion', 'v3');
-%   >> seq2ge('../examples/2DFLASH_v1.2.1.seq', 'pulseqVersion', 'v1.2.1');
-%
-%   >> system = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
-%   >> seq2ge('2DFLASH.seq', 'system', system, 'verbose', true);
-%
+% Usage example:
 %   >> seq = mr.Sequence();
 %   >> seq.read('2DFLASH.seq');
-%   >> seq2ge(seq, 'system', system);
-%
-
-%import pulsegeq.*
+%   >> sys = toppe.systemspecs('maxSlew',200,'slewUnit','T/m/s','maxGrad',50','gradUnit','mT/m');
+%   >> seq2ge('2DFLASH.seq', sys, 'toppeVersion', 'v6', 'verbose', true);
 
 %% parse inputs
 % Defaults
-arg.toppeVersion = 'v4';
+arg.toppeVersion = 5;
 arg.verbose = false;
 arg.debug = false;
 arg.pulseqVersion = 'v1.4.0';
@@ -47,34 +41,18 @@ arg.blockStop = [];
 arg.ibstart = 1;    % skip the first (ibstart-1) events (for testing)
 arg.nt      = [];
 
-%  systemSiemens      struct containing Siemens system specs. 
-%                        .rfRingdownTime     Default: 30e-6   (sec)
-%                        .rfDeadTime         Default: 100e-6  (sec)
-%                        .adcDeadTime        Default: 20e-6   (sec)
-%arg.systemSiemens = struct('rfRingdownTime', 30e-6, 'rfDeadTime', 100e-6,'adcDeadTime', 20e-6);
-
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = toppe.utils.vararg_pair(arg, varargin);
 
-switch arg.toppeVersion
-    case 'v2' 
-        nCols = 16;   % number of columns in scanloop.txt
-    case 'v3' 
-        nCols = 25;   % number of columns in scanloop.txt
-    case 'v4' 
-        nCols = 26;   % number of columns in scanloop.txt
-    otherwise
-        error('Please use TOPPE >= v2');
+arg.toppeVersion = arg.toppeVersion(end);
+if ischar(arg.toppeVersion)
+    arg.toppeVersion = str2num(arg.toppeVersion);
 end
 
 switch arg.pulseqVersion
     case 'v1.2.1'
         nEvents = 6;   % number of events per block (number of columns in .seq file)
-    case 'v1.3.0'
-        nEvents = 7;
-    case 'v1.3.1'
-        nEvents = 7;
-    case 'v1.4.0'
+    case {'v1.3.0', 'v1.3.1', 'v1.4.0'}
         nEvents = 7;
     otherwise
         error(sprintf('Pulseq version %s is not supported', arg.pulseqVersion));
@@ -94,11 +72,14 @@ end
 %% Loop through blocks and build 'moduleArr' and 'loopStructArr'
 
 % 'moduleArr' struct array
-% Find blocks that are unique in terms of waveforms and timing (i.e., waveform amplitudes, RF/ADC phase, etc can differ),
+% Find blocks that are unique in terms of waveforms and timing 
+% (i.e., waveform amplitudes, RF/ADC phase, etc can differ),
 % and fill 'moduleArr' struct array accordingly. 
-% Each entry of 'moduleArr' is a struct containing all waveforms belonging to one module (.mod file), and other module info.
+% Each entry of 'moduleArr' is a struct containing all waveforms 
+% belonging to one module (.mod file), and other module info.
 % The usage of the word "module" here is consistent with its usage in TOPPE.
-% For now, ignore 'EXT' blocks (TODO)
+% For now, the 'EXT' event ID (last column in event table) marks the beginning
+% of a 'block group' -- this information is used by the GE interpreter.
 
 % 'loopStructArr' struct array
 % Each entry in this array contains information needed to fill out one row of scanloop.txt.
@@ -136,10 +117,8 @@ view = 1;
 echo = 0; 
 adcCount = 0;
 
-% h = waitbar(0,'Looping through blocks and looking for uniqueness...');
 for ib = (arg.ibstart+1):nt
     if ~mod(ib, 500)
-    %   waitbar(ib/size(blockEvents,1),h)
         for inb = 1:20
             fprintf('\b');
         end
@@ -186,9 +165,10 @@ for ib = (arg.ibstart+1):nt
     % create a TOPPE module struct from current Pulseq block
     modCandidate = pulsegeq.sub_block2module(block, ib, systemGE, length(moduleArr) + 1);
 
-    % Is there an existing module that can be 'reused'?
-    % Specifically, does one of the existing modules (elements of moduleArr) have the same length waveform, 
-    % the same non-empty rf/gx/gy/gz, and the same value of 'hasADC', as modCandidate?
+    % Is there an existing module that can be reused (scaled)?
+    % Specifically, does one of the existing modules (elements of moduleArr) have 
+    % the same length waveform, the same non-empty rf/gx/gy/gz, 
+    % and the same value of 'hasADC', as modCandidate?
     isUnique = 1; 
     for ic = 1:length(moduleArr)
         if (moduleArr(ic).nt == modCandidate.nt ...
@@ -219,7 +199,6 @@ for ib = (arg.ibstart+1):nt
     % so now check to see if all waveform shapes in modCandidate match those in moduleArr(ic).
 
     tol = 1e-3;  % Shape is deemed equal if sum(abs(difference)) < tol
-
     ii = 1;
     isSameShape = [];
     for ax = {'rf','gx','gy','gz'};
@@ -243,7 +222,7 @@ for ib = (arg.ibstart+1):nt
     I = find(res==1);
     if ~isempty(I)
         % We found a set of RF/gradient waveforms in modularArr(ic) with the same shapes as those in modCandidate,
-        % so we'll 'reuse' that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
+        % so we'll reuse that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
         iWavReuse = I(1);
         loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', iWavReuse);
@@ -400,7 +379,7 @@ for ic = 1:length(moduleArr)
     end
 
     % update entry in modules.txt
-    fprintf(fid,'%s\t%d\t%d\t%d\n', moduleArr(ic).ofname, 0, hasrf, hasadc);    
+    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', moduleArr(ic).ofname, 0, hasrf, hasadc);    
 end
 fclose(fid);
 
@@ -410,12 +389,12 @@ if arg.verbose
 end
 
 
-%% Write scanloop.txt, which specifices the scan sequence (along with modules.txt and the .mod files).
+%% Write scanloop.txt, which specifies the scan sequence (along with modules.txt and the .mod files).
 
 % load .mod files
 mods = toppe.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
-toppe.write2loop('setup', systemGE, 'version', str2num(arg.toppeVersion(2))); 
+toppe.write2loop('setup', systemGE, 'version', arg.toppeVersion); 
 
 for ib = 1:length(loopStructArr)
 
@@ -501,17 +480,57 @@ end
 
 toppe.write2loop('finish', systemGE);
 
-if arg.verbose
-    fprintf(' done\n');
+if arg.toppeVersion > 5
+    % Write cores.txt, which defines the block groups
+    blockGroups = [];
+    for ie=1:length(loopStructArr)
+        bgID = loopStructArr(ie).blockGroupID;
+        modID = loopStructArr(ie).mod;
+        if ~isempty(bgID)
+            % start of group (will simply overwrite if already existing)
+            blockGroups{bgID} = modID;
+            bgIDcurrent = bgID;
+        else
+            blockGroups{bgIDcurrent} = [blockGroups{bgIDcurrent} modID];
+        end
+    end
+    toppe.writecoresfile(blockGroups);
 end
 
-%% Put TOPPE files in a .tar file (for convenience)
-system(sprintf('tar cf %s modules.txt scanloop.txt', arg.tarFile));
+% Write TOPPE .entry file.
+% This can be edited by hand as needed after copying to scanner.
+for ic = 1:length(moduleArr)
+    if moduleArr(ic).hasRF
+        b1ScalingFile = moduleArr(ic).ofname;
+    end
+    if moduleArr(ic).hasADC
+        readoutFile = moduleArr(ic).ofname;
+    end
+end
+toppe.writeentryfile('toppeN.entry', ...
+    'filePath', '/usr/g/research/pulseq/v6/seq2ge/', ...
+    'b1ScalingFile', b1ScalingFile, ...
+    'readoutFile', readoutFile);
+
+% Create 'sequence stamp' file for TOPPE.
+% This file is listed in line 6 of toppe0.entry
+toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', systemGE);
+
+% Put TOPPE files in a .tar file (for convenience)
+system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt', arg.tarFile));
+if arg.toppeVersion > 5
+    system(sprintf('tar rf %s %s', arg.tarFile, 'cores.txt'));
+end
 for ic = 1:length(moduleArr)
     system(sprintf('tar rf %s %s', arg.tarFile, moduleArr(ic).ofname));
 end
 
+if arg.verbose
+    fprintf(' done\n');
+end
+
 return;
+
 
 % list archive contents
 if arg.verbose
@@ -520,7 +539,7 @@ if arg.verbose
 end
 
 % clean up
-system('rm modules.txt scanloop.txt');
+system('rm modules.txt scanloop.txt seqstamp.txt toppeN.entry');
 for ic = 1:length(moduleArr)
     system(sprintf('rm %s', moduleArr(ic).ofname));
 end

@@ -390,7 +390,7 @@ for ic = 1:length(moduleArr)
     end
 
     % update entry in modules.txt
-    fprintf(fid,'%s\t%d\t%d\t%d\n', moduleArr(ic).ofname, 0, hasrf, hasadc);    
+    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', moduleArr(ic).ofname, 0, hasrf, hasadc);    
 end
 fclose(fid);
 
@@ -506,17 +506,37 @@ for ie=1:length(loopStructArr)
 end
 toppe.writecoresfile(blockGroups);
 
-if arg.verbose
-    fprintf(' done\n');
+% Write TOPPE .entry file.
+% This can be edited by hand as needed after copying to scanner.
+for ic = 1:length(moduleArr)
+    if moduleArr(ic).hasRF
+        b1ScalingFile = moduleArr(ic).ofname;
+    end
+    if moduleArr(ic).hasADC
+        readoutFile = moduleArr(ic).ofname;
+    end
 end
+toppe.writeentryfile('toppeN.entry', ...
+    'filePath', '/usr/g/research/pulseq/v6/seq2ge/', ...
+    'b1ScalingFile', b1ScalingFile, ...
+    'readoutFile', readoutFile);
 
-%% Put TOPPE files in a .tar file (for convenience)
-system(sprintf('tar cf %s modules.txt scanloop.txt', arg.tarFile));
+% Create 'sequence stamp' file for TOPPE.
+% This file is listed in line 6 of toppe0.entry
+toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', systemGE);
+
+% Put TOPPE files in a .tar file (for convenience)
+system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt cores.txt', arg.tarFile));
 for ic = 1:length(moduleArr)
     system(sprintf('tar rf %s %s', arg.tarFile, moduleArr(ic).ofname));
 end
 
+if arg.verbose
+    fprintf(' done\n');
+end
+
 return;
+
 
 % list archive contents
 if arg.verbose
@@ -525,7 +545,7 @@ if arg.verbose
 end
 
 % clean up
-system('rm modules.txt scanloop.txt');
+system('rm modules.txt scanloop.txt seqstamp.txt toppeN.entry');
 for ic = 1:length(moduleArr)
     system(sprintf('rm %s', moduleArr(ic).ofname));
 end

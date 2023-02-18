@@ -40,9 +40,10 @@ else
     nt = arg.nt;
 end
 
-%% Identify 'master blocks'
+%% Create master blocks
 % master blocks = unique up to a scaling factor, or phase/frequency offsets.
-% First find unique blocks, then determine max amplitudes, then
+% Contains waveforms with maximum amplitude across blocks.
+% First find unique blocks, then determine and set max amplitudes, then
 % write to .block files
 
 % Get unique blocks
@@ -75,17 +76,17 @@ end
 fprintf('\n');
 
 % Determine which master block each block 'belongs' to
-UBID = zeros(1,nt);   
+MBID = zeros(1,nt);   
 for ib = 1:nt
     block = seq.getBlock(ib);
 
     for imb = 1:length(MasterBlocks)
         if compareblocks(block, MasterBlocks{imb});
-            UBID(ib) = imb; break;
+            MBID(ib) = imb; break;
         end
     end
 
-    if UBID(ib) == 0  % delay block
+    if MBID(ib) == 0  % delay block
         %fprintf('Delay block found on line %d\n', ib);
     end
 end
@@ -98,7 +99,7 @@ for imb = 1:length(MasterBlocks)
     MasterBlocks{imb}.maxgzamp = 0;  
 
     for ib = 1:nt
-        if UBID(ib) ~= imb
+        if MBID(ib) ~= imb
             continue; 
         end
         block = seq.getBlock(ib);
@@ -135,13 +136,26 @@ for imb = 1:length(MasterBlocks)
     end
 end
 
-% write to .block files
+% save MasterBlocks MasterBlocks
+
+% Write master .block files
 for imb = 1:length(MasterBlocks)
     ofname = sprintf('master%d.block', imb);
     pulsegeq.writeblock(ofname, MasterBlocks{imb});
 end
 
-save MasterBlocks MasterBlocks
+%% Write masterblocks.txt
+% TODO
+
+
+%% Collect scan loop information and write to scanloop.txt
+d = zeros(nt, 28);
+for ib = 1:nt
+    block = seq.getBlock(ib);
+
+%    if MBID(ib) ~= 0  % if not a delay block
+%        d1 = getblocksettingsGEhardwareunits(block, MBID(ib));
+end
 
 return
 

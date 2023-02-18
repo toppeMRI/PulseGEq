@@ -3,6 +3,8 @@ function writeblock(ofname, blk, sys)
 % Write a Pulseq block to a custom file format that
 % can be read by the PulseGEq interpreter.
 
+sys.gamma = 4.2576e3;  % Hz/Gauss
+
 % open file for writing
 fid = fopen(ofname, 'w', 'ieee-be');
 
@@ -22,10 +24,7 @@ return
 %% Functions for writing channels to file
 function sub_writerf(fid, rf, sys)
 
-C = toppe.constants;
-
-% downsample from 1us to 4us raster
-rf.signal = rf.signal(2:4:end);
+C = pulsegeq.constants;
 
 % type
 if isempty(rf)
@@ -33,6 +32,9 @@ if isempty(rf)
     return
 end
 fwrite(fid, C.ARBITRARY, 'int16');
+
+% downsample from 1us to 4us raster
+rf.signal = rf.signal(2:4:end);
 
 % delay
 fwrite(fid, round(rf.delay*1e6), 'int16');     % us

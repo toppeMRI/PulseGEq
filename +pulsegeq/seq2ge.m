@@ -29,11 +29,6 @@ else
     seq = seqarg;
 end
 
-%% Identify 'master blocks'
-% master blocks = unique up to a scaling factor, or phase/frequency offsets.
-% First find unique blocks, then determine max amplitudes, then
-% write to .block files
-
 % get contents of [BLOCKS] section
 blockEvents = cell2mat(seq.blockEvents);
 blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; 
@@ -44,6 +39,11 @@ if isempty(arg.nt)
 else
     nt = arg.nt;
 end
+
+%% Identify 'master blocks'
+% master blocks = unique up to a scaling factor, or phase/frequency offsets.
+% First find unique blocks, then determine max amplitudes, then
+% write to .block files
 
 % Get unique blocks
 uniqueBlocks{1} = seq.getBlock(1);
@@ -58,10 +58,9 @@ for ib = 1:nt
 
     block = seq.getBlock(ib);
 
-    % ignore delay blocks for now
-    if (isempty(block.rf) & isempty(block.gx) & ...
-        isempty(block.gy) & isempty(block.gz) & ...
-        isempty(block.adc) & isempty(block.gz))
+    % ignore delay blocks for now. TODO
+    if (isempty(block.rf) & isempty(block.gx) & isempty(block.gy) & ...
+        isempty(block.gz) & isempty(block.adc))
         continue;
     end
 
@@ -73,9 +72,73 @@ for ib = 1:nt
     end
 end
 
+fprintf('\n');
+
+% Determine which master block each block 'belongs' to
+UBID = zeros(1,nt);   
+for ib = 1:nt
+    block = seq.getBlock(ib);
+
+    for imb = 1:length(uniqueBlocks)
+        if compareblocks(block, uniqueBlocks{imb});
+            UBID(ib) = imb; break;
+        end
+    end
+
+    if UBID(ib) == 0  % delay block
+        %fprintf('Delay block found on line %d\n', ib);
+    end
+end
+
+% Determine max amplitude across blocks
+for imb = 1:length(uniqueBlocks)
+    uniqueBlocks{imb}.maxrfamp = 0;  % this is ok even if rf = []
+    uniqueBlocks{imb}.maxgxamp = 0;  
+    uniqueBlocks{imb}.maxgyamp = 0;  
+    uniqueBlocks{imb}.maxgzamp = 0;  
+
+    for ib = 1:nt
+        if UBID(ib) ~= imb
+            continue; 
+        end
+        block = seq.getBlock(ib);
+        if ~isempty(block.rf)
+            uniqueBlocks{imb}.maxrfamp = max(uniqueBlocks{imb}.maxrfamp, max(abs(block.rf.signal)));
+        end
+        if ~isempty(block.gx)
+            uniqueBlocks{imb}.maxgxamp = max(uniqueBlocks{imb}.maxgxamp, abs(block.gx.amplitude));
+        end
+        if ~isempty(block.gy)
+            uniqueBlocks{imb}.maxgyamp = max(uniqueBlocks{imb}.maxgyamp, abs(block.gy.amplitude));
+        end
+        if ~isempty(block.gz)
+            uniqueBlocks{imb}.maxgzamp = max(uniqueBlocks{imb}.maxgzamp, abs(block.gz.amplitude));
+        end
+            
+    end
+end
+
+% Set waveform amplitudes in master blocks to max
+for imb = 1:length(uniqueBlocks)
+    b = uniqueBlocks{imb};   % shorthand
+    if ~isempty(b.rf)
+        b.rf.signal = b.rf.signal/max(abs(b.rf.signal))*b.maxrfamp;
+    end
+    if ~isempty(b.gx)
+        b.gx.amplitude = b.maxgxamp;
+    end
+    if ~isempty(b.gy)
+        b.gy.amplitude = b.maxgyamp;
+    end
+    if ~isempty(b.gz)
+        b.gz.amplitude = b.maxgzamp;
+    end
+end
+
+% write to .block files
+
 save uniqueBlocks uniqueBlocks
 
-fprintf('\n');
 return
 
 
@@ -128,8 +191,14 @@ function issame = comparerf(rf1, rf2)
 
     if (rf1.delay ~= rf1.delay | ...
         rf1.shape_dur ~= rf2.shape_dur | ...
-        norm(rf1.t-rf2.t) > tol | ...
-        norm(rf1.signal-rf2.signal) > tol)
+        norm(rf1.t-rf2.t) > tol)
+        issame = false; return;
+    end
+
+    % compare normalized signal (shape only)
+    wav1 = abs(rf1.signal)/max(abs(rf1.signal));
+    wav2 = abs(rf2.signal)/max(abs(rf2.signal));
+    if norm(wav1 - wav2) > tol
         issame = false; return;
     end
 

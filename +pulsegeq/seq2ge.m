@@ -46,7 +46,7 @@ end
 % write to .block files
 
 % Get unique blocks
-uniqueBlocks{1} = seq.getBlock(1);
+MasterBlocks{1} = seq.getBlock(1);
 
 for ib = 1:nt
     if ~mod(ib, 500) | ib == nt
@@ -64,11 +64,11 @@ for ib = 1:nt
         continue;
     end
 
-    for imb = 1:length(uniqueBlocks)
-        isUnique(imb) = compareblocks(block, uniqueBlocks{imb});
+    for imb = 1:length(MasterBlocks)
+        isUnique(imb) = compareblocks(block, MasterBlocks{imb});
     end
     if sum(isUnique) == 0
-        uniqueBlocks{imb+1} = block;
+        MasterBlocks{imb+1} = block;
     end
 end
 
@@ -79,8 +79,8 @@ UBID = zeros(1,nt);
 for ib = 1:nt
     block = seq.getBlock(ib);
 
-    for imb = 1:length(uniqueBlocks)
-        if compareblocks(block, uniqueBlocks{imb});
+    for imb = 1:length(MasterBlocks)
+        if compareblocks(block, MasterBlocks{imb});
             UBID(ib) = imb; break;
         end
     end
@@ -91,11 +91,11 @@ for ib = 1:nt
 end
 
 % Determine max amplitude across blocks
-for imb = 1:length(uniqueBlocks)
-    uniqueBlocks{imb}.maxrfamp = 0;  % this is ok even if rf = []
-    uniqueBlocks{imb}.maxgxamp = 0;  
-    uniqueBlocks{imb}.maxgyamp = 0;  
-    uniqueBlocks{imb}.maxgzamp = 0;  
+for imb = 1:length(MasterBlocks)
+    MasterBlocks{imb}.maxrfamp = 0;  % this is ok even if rf = []
+    MasterBlocks{imb}.maxgxamp = 0;  
+    MasterBlocks{imb}.maxgyamp = 0;  
+    MasterBlocks{imb}.maxgzamp = 0;  
 
     for ib = 1:nt
         if UBID(ib) ~= imb
@@ -103,24 +103,24 @@ for imb = 1:length(uniqueBlocks)
         end
         block = seq.getBlock(ib);
         if ~isempty(block.rf)
-            uniqueBlocks{imb}.maxrfamp = max(uniqueBlocks{imb}.maxrfamp, max(abs(block.rf.signal)));
+            MasterBlocks{imb}.maxrfamp = max(MasterBlocks{imb}.maxrfamp, max(abs(block.rf.signal)));
         end
         if ~isempty(block.gx)
-            uniqueBlocks{imb}.maxgxamp = max(uniqueBlocks{imb}.maxgxamp, abs(block.gx.amplitude));
+            MasterBlocks{imb}.maxgxamp = max(MasterBlocks{imb}.maxgxamp, abs(block.gx.amplitude));
         end
         if ~isempty(block.gy)
-            uniqueBlocks{imb}.maxgyamp = max(uniqueBlocks{imb}.maxgyamp, abs(block.gy.amplitude));
+            MasterBlocks{imb}.maxgyamp = max(MasterBlocks{imb}.maxgyamp, abs(block.gy.amplitude));
         end
         if ~isempty(block.gz)
-            uniqueBlocks{imb}.maxgzamp = max(uniqueBlocks{imb}.maxgzamp, abs(block.gz.amplitude));
+            MasterBlocks{imb}.maxgzamp = max(MasterBlocks{imb}.maxgzamp, abs(block.gz.amplitude));
         end
             
     end
 end
 
 % Set waveform amplitudes in master blocks to max
-for imb = 1:length(uniqueBlocks)
-    b = uniqueBlocks{imb};   % shorthand
+for imb = 1:length(MasterBlocks)
+    b = MasterBlocks{imb};   % shorthand
     if ~isempty(b.rf)
         b.rf.signal = b.rf.signal/max(abs(b.rf.signal))*b.maxrfamp;
     end
@@ -136,8 +136,12 @@ for imb = 1:length(uniqueBlocks)
 end
 
 % write to .block files
+for imb = 1:length(MasterBlocks)
+    ofname = sprintf('master%d.block', imb);
+    pulsegeq.writeblock(ofname, MasterBlocks{imb});
+end
 
-save uniqueBlocks uniqueBlocks
+save MasterBlocks MasterBlocks
 
 return
 

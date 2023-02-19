@@ -4,6 +4,8 @@ function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
 % Convert a Pulseq file (http://pulseq.github.io/) to a set of files
 % that can be executed on GE MR scanners. 
 
+import pulsegeq.*
+
 %% parse inputs
 % Defaults
 arg.verbose = false;
@@ -13,7 +15,7 @@ arg.tarFile = 'gescanfiles.tar';
 arg.nt      = [];
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
-arg = toppe.utils.vararg_pair(arg, varargin);
+arg = pulsegeq.utils.vararg_pair(arg, varargin);
 
 %% Pulseq 1.4.0 
 nEvents = 7;
@@ -40,14 +42,14 @@ else
     nt = arg.nt;
 end
 
-%% Create master blocks
-% master blocks = unique up to a scaling factor, or phase/frequency offsets.
+%% Create parent blocks
+% parent blocks = unique up to a scaling factor, or phase/frequency offsets.
 % Contains waveforms with maximum amplitude across blocks.
 % First find unique blocks, then determine and set max amplitudes, then
 % write to .block files
 
 % Get unique blocks
-MasterBlocks{1} = seq.getBlock(1);
+ParentBlocks{1} = seq.getBlock(1);
 
 for ib = 1:nt
     if ~mod(ib, 500) | ib == nt
@@ -65,23 +67,23 @@ for ib = 1:nt
         continue;
     end
 
-    for imb = 1:length(MasterBlocks)
-        isUnique(imb) = compareblocks(block, MasterBlocks{imb});
+    for imb = 1:length(ParentBlocks)
+        isSame(imb) = compareblocks(block, ParentBlocks{imb});
     end
-    if sum(isUnique) == 0
-        MasterBlocks{imb+1} = block;
+    if sum(isSame) == 0
+        ParentBlocks{imb+1} = block;
     end
 end
 
 fprintf('\n');
 
-% Determine which master block each block 'belongs' to
+% Determine which parent block each block 'belongs' to
 MBID = zeros(1,nt);   
 for ib = 1:nt
     block = seq.getBlock(ib);
 
-    for imb = 1:length(MasterBlocks)
-        if compareblocks(block, MasterBlocks{imb});
+    for imb = 1:length(ParentBlocks)
+        if compareblocks(block, ParentBlocks{imb});
             MBID(ib) = imb; break;
         end
     end
@@ -92,11 +94,11 @@ for ib = 1:nt
 end
 
 % Determine max amplitude across blocks
-for imb = 1:length(MasterBlocks)
-    MasterBlocks{imb}.maxrfamp = 0;  % this is ok even if rf = []
-    MasterBlocks{imb}.maxgxamp = 0;  
-    MasterBlocks{imb}.maxgyamp = 0;  
-    MasterBlocks{imb}.maxgzamp = 0;  
+for imb = 1:length(ParentBlocks)
+    ParentBlocks{imb}.maxrfamp = 0;  % this is ok even if rf = []
+    ParentBlocks{imb}.maxgxamp = 0;  
+    ParentBlocks{imb}.maxgyamp = 0;  
+    ParentBlocks{imb}.maxgzamp = 0;  
 
     for ib = 1:nt
         if MBID(ib) ~= imb
@@ -104,24 +106,24 @@ for imb = 1:length(MasterBlocks)
         end
         block = seq.getBlock(ib);
         if ~isempty(block.rf)
-            MasterBlocks{imb}.maxrfamp = max(MasterBlocks{imb}.maxrfamp, max(abs(block.rf.signal)));
+            ParentBlocks{imb}.maxrfamp = max(ParentBlocks{imb}.maxrfamp, max(abs(block.rf.signal)));
         end
         if ~isempty(block.gx)
-            MasterBlocks{imb}.maxgxamp = max(MasterBlocks{imb}.maxgxamp, abs(block.gx.amplitude));
+            ParentBlocks{imb}.maxgxamp = max(ParentBlocks{imb}.maxgxamp, abs(block.gx.amplitude));
         end
         if ~isempty(block.gy)
-            MasterBlocks{imb}.maxgyamp = max(MasterBlocks{imb}.maxgyamp, abs(block.gy.amplitude));
+            ParentBlocks{imb}.maxgyamp = max(ParentBlocks{imb}.maxgyamp, abs(block.gy.amplitude));
         end
         if ~isempty(block.gz)
-            MasterBlocks{imb}.maxgzamp = max(MasterBlocks{imb}.maxgzamp, abs(block.gz.amplitude));
+            ParentBlocks{imb}.maxgzamp = max(ParentBlocks{imb}.maxgzamp, abs(block.gz.amplitude));
         end
             
     end
 end
 
-% Set waveform amplitudes in master blocks to max
-for imb = 1:length(MasterBlocks)
-    b = MasterBlocks{imb};   % shorthand
+% Set waveform amplitudes in parent blocks to max
+for imb = 1:length(ParentBlocks)
+    b = ParentBlocks{imb};   % shorthand
     if ~isempty(b.rf)
         b.rf.signal = b.rf.signal/max(abs(b.rf.signal))*b.maxrfamp;
     end
@@ -136,15 +138,16 @@ for imb = 1:length(MasterBlocks)
     end
 end
 
-% save MasterBlocks MasterBlocks
+% save ParentBlocks ParentBlocks
 
-% Write master .block files
-for imb = 1:length(MasterBlocks)
-    ofname = sprintf('master%d.block', imb);
-    pulsegeq.writeblock(ofname, MasterBlocks{imb});
+
+%% Write parent block files, in units suitable for the PulseGEq interpreter
+for imb = 1:length(ParentBlocks)
+    ofname = sprintf('parent%d.block', imb);
+    pulsegeq.writeblock(ofname, ParentBlocks{imb});
 end
 
-%% Write masterblocks.txt
+%% Write parentblocks.txt
 % TODO
 
 
@@ -156,103 +159,6 @@ for ib = 1:nt
 %    if MBID(ib) ~= 0  % if not a delay block
 %        d1 = getblocksettingsGEhardwareunits(block, MBID(ib));
 end
-
-return
-
-
-function issame = compareblocks(b1, b2)
-
-    issame = true;
-
-    if b1.blockDuration ~= b2.blockDuration
-        issame = false; return;
-    end
-    if (xor(isempty(b1.rf), isempty(b2.rf)) | ...
-        xor(isempty(b1.gx), isempty(b2.gx)) | ... 
-        xor(isempty(b1.gy), isempty(b2.gy)) | ... 
-        xor(isempty(b1.gz), isempty(b2.gz)) | ... 
-        xor(isempty(b1.adc), isempty(b2.adc)))
-        issame = false; return;
-    end
-    if ~isempty(b1.rf)
-        if ~comparerf(b1.rf, b2.rf)
-            issame = false; return;
-        end
-    end
-    if ~isempty(b1.gx)
-        if ~comparegradients(b1.gx, b2.gx)
-            issame = false; return;
-        end
-    end
-    if ~isempty(b1.gy)
-        if ~comparegradients(b1.gy, b2.gy)
-            issame = false; return;
-        end
-    end
-    if ~isempty(b1.gz)
-        if ~comparegradients(b1.gz, b2.gz)
-            issame = false; return;
-        end
-    end
-    if ~isempty(b1.adc)
-        if ~compareadc(b1.adc, b2.adc)
-            issame = false; return;
-        end
-    end
-return
-
-function issame = comparerf(rf1, rf2)
-
-    tol = 1e-4;  % defined to be equal if norm < tol
-
-    issame = true;
-
-    if (rf1.delay ~= rf1.delay | ...
-        rf1.shape_dur ~= rf2.shape_dur | ...
-        norm(rf1.t-rf2.t) > tol)
-        issame = false; return;
-    end
-
-    % compare normalized signal (shape only)
-    wav1 = abs(rf1.signal)/max(abs(rf1.signal));
-    wav2 = abs(rf2.signal)/max(abs(rf2.signal));
-    if norm(wav1 - wav2) > tol
-        issame = false; return;
-    end
-
-return
-
-function issame = comparegradients(g1, g2)
-
-    tol = 1e-4;
-
-    issame = true;
-
-    if ~strcmp(g1.type, g2.type)
-        issame = false; return;
-    end
-    if strcmp(g1.type, 'trap')
-        if (g1.riseTime ~= g2.riseTime | ...
-            g1.flatTime ~= g2.flatTime | ...
-            g1.fallTime ~= g2.fallTime | ...
-            g1.delay ~= g2.delay)
-            issame = false; return;
-        end
-    else
-        % TODO: handle arbitrary waveforms
-    end
-
-return
-
-function issame = compareadc(adc1, adc2)
-
-    issame = true;
-
-    if (adc1.numSamples ~= adc2.numSamples | ...
-        adc1.dwell ~= adc2.dwell | ...
-        adc1.delay ~= adc2.delay)
-        issame = false;
-    end
 
 return
 

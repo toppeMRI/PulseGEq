@@ -1,7 +1,7 @@
 function writeblock(ofname, blk, sys)
 %
-% Write a Pulseq block to a custom file format that
-% can be read by the PulseGEq interpreter.
+% Write a Pulseq block to a custom machine-readable file format 
+% for the PulseGEq interpreter.
 
 sys.gamma = 4.2576e3;  % Hz/Gauss
 
@@ -21,7 +21,6 @@ fclose(fid);
 return
 
 
-%% Functions for writing channels to file
 function sub_writerf(fid, rf, sys)
 
 C = pulsegeq.constants;
@@ -55,7 +54,7 @@ return
 
 function sub_writegrad(fid, g, sys)
 
-C = toppe.constants;
+C = pulsegeq.constants;
 
 % type
 if isempty(g)
@@ -81,7 +80,8 @@ if strcmp(g.type, 'trap')
     fwrite(fid, round(g.flatTime*1e6), 'int16');
     fwrite(fid, round(g.fallTime*1e6), 'int16');
 else
-    % TODO. Remember to resample to 4us raster for ge
+    % TODO: handle arbitrary gradients 
+    % Remember to resample to 4us raster for ge
 end
 
 return
@@ -89,7 +89,7 @@ return
 
 function sub_writeadc(fid, adc, sys)
 
-C = toppe.constants;
+C = pulsegeq.constants;
 
 if isempty(adc)
     fwrite(fid, C.NULL, 'int16');

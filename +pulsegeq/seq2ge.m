@@ -144,22 +144,38 @@ end
 
 %% Write parent block files for the PulseGEq interpreter
 for ipb = 1:length(ParentBlocks)
-    ofname = sprintf('parent%d.block', ipb);
-    pulsegeq.writeblock(ofname, ParentBlocks{ipb});
+    ParentBlocks{ipb}.ofname = sprintf('parent%d.block', ipb);
+    pulsegeq.writeblock(ParentBlocks{ipb}.ofname, ParentBlocks{ipb}, systemGE);
 end
 
 %% Write parentblocks.txt
 % TODO
 
 
-%% Collect scan loop information and write to scanloop.txt
-d = zeros(nt, 28);
+%% Write dynamic scan information to scanloop.txt
+
+%pulsegeq.write2loop('setup', systemGE, 'version', 6); 
 for ib = 1:nt
     block = seq.getBlock(ib);
-    d = getdynamics(block);
-%    if ParentBlockID(ib) ~= 0  % if not a delay block
-%        d1 = getblocksettingsGEhardwareunits(block, ParentBlockID(ib));
+
+    d = getdynamics(block); % dynamic settings (amplitudes etc) 
+
+    pbid = ParentBlockID(ib);
+
+%{
+    Gamplitude = [d.
+    pulsegeq.write2loop(ParentBlocks{pbid}.ofname, systemGE, ...
+        'Gamplitude',  Gamplitude, ...
+        'RFamplitude', RFamplitude, ...
+        'RFphase',     RFphase, ...
+        'DAQphase',    DAQphase, ...
+        'RFoffset',    RFoffset, ...
+        'slice',       slice, ...
+        'echo',        echo, ...
+        'view',        view);
+        %}
 end
+%pulsegeq.write2loop('setup', systemGE, 'version', 6); 
 
 return
 

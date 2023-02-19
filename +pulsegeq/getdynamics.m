@@ -17,13 +17,13 @@ if ~isempty(b.rf)
     d.rffreq = b.rf.freqOffset;
 end
 if ~isempty(b.gx)
-    d.gxAmplitude = gx.amplitude;
+    d.gxAmplitude = b.gx.amplitude;
 end
 if ~isempty(b.gy)
-    d.gyAmplitude = gy.amplitude;
+    d.gyAmplitude = b.gy.amplitude;
 end
 if ~isempty(b.gz)
-    d.gzAmplitude = gz.amplitude;
+    d.gzAmplitude = b.gz.amplitude;
 end
 if ~isempty(b.adc)
     d.recphs = b.adc.phaseOffset;

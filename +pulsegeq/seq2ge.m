@@ -17,10 +17,9 @@ arg.nt      = [];
 % Substitute specified system values as appropriate (from MIRT toolbox)
 arg = pulsegeq.utils.vararg_pair(arg, varargin);
 
-%% Pulseq 1.4.0 
-nEvents = 7;
 
 %% Get seq object
+
 if isa(seqarg, 'char')
     seq = mr.Sequence();
     seq.read(seqarg);
@@ -32,6 +31,7 @@ else
 end
 
 % get contents of [BLOCKS] section
+nEvents = 7;   % Pulseq 1.4.0 
 blockEvents = cell2mat(seq.blockEvents);
 blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; 
 
@@ -41,6 +41,7 @@ if isempty(arg.nt)
 else
     nt = arg.nt;
 end
+
 
 %% Create parent blocks
 % parent blocks = unique up to a scaling factor, or phase/frequency offsets.
@@ -67,63 +68,63 @@ for ib = 1:nt
         continue;
     end
 
-    for imb = 1:length(ParentBlocks)
-        isSame(imb) = compareblocks(block, ParentBlocks{imb});
+    for ipb = 1:length(ParentBlocks)
+        IsSame(ipb) = compareblocks(block, ParentBlocks{ipb});
     end
-    if sum(isSame) == 0
-        ParentBlocks{imb+1} = block;
+    if sum(IsSame) == 0
+        ParentBlocks{ipb+1} = block;  % found a unique block, so add it to list
     end
 end
 
 fprintf('\n');
 
 % Determine which parent block each block 'belongs' to
-MBID = zeros(1,nt);   
+ParentBlockID = zeros(1,nt);   
 for ib = 1:nt
     block = seq.getBlock(ib);
 
-    for imb = 1:length(ParentBlocks)
-        if compareblocks(block, ParentBlocks{imb});
-            MBID(ib) = imb; break;
+    for ipb = 1:length(ParentBlocks)
+        if compareblocks(block, ParentBlocks{ipb});
+            ParentBlockID(ib) = ipb; break;
         end
     end
 
-    if MBID(ib) == 0  % delay block
+    if ParentBlockID(ib) == 0  % delay block
         %fprintf('Delay block found on line %d\n', ib);
     end
 end
 
 % Determine max amplitude across blocks
-for imb = 1:length(ParentBlocks)
-    ParentBlocks{imb}.maxrfamp = 0;  % this is ok even if rf = []
-    ParentBlocks{imb}.maxgxamp = 0;  
-    ParentBlocks{imb}.maxgyamp = 0;  
-    ParentBlocks{imb}.maxgzamp = 0;  
+for ipb = 1:length(ParentBlocks)
+    ParentBlocks{ipb}.maxrfamp = 0;  % this is ok even if rf = []
+    ParentBlocks{ipb}.maxgxamp = 0;  
+    ParentBlocks{ipb}.maxgyamp = 0;  
+    ParentBlocks{ipb}.maxgzamp = 0;  
 
     for ib = 1:nt
-        if MBID(ib) ~= imb
+        if ParentBlockID(ib) ~= ipb
             continue; 
         end
         block = seq.getBlock(ib);
         if ~isempty(block.rf)
-            ParentBlocks{imb}.maxrfamp = max(ParentBlocks{imb}.maxrfamp, max(abs(block.rf.signal)));
+            ParentBlocks{ipb}.maxrfamp = max(ParentBlocks{ipb}.maxrfamp, max(abs(block.rf.signal)));
         end
         if ~isempty(block.gx)
-            ParentBlocks{imb}.maxgxamp = max(ParentBlocks{imb}.maxgxamp, abs(block.gx.amplitude));
+            ParentBlocks{ipb}.maxgxamp = max(ParentBlocks{ipb}.maxgxamp, abs(block.gx.amplitude));
         end
         if ~isempty(block.gy)
-            ParentBlocks{imb}.maxgyamp = max(ParentBlocks{imb}.maxgyamp, abs(block.gy.amplitude));
+            ParentBlocks{ipb}.maxgyamp = max(ParentBlocks{ipb}.maxgyamp, abs(block.gy.amplitude));
         end
         if ~isempty(block.gz)
-            ParentBlocks{imb}.maxgzamp = max(ParentBlocks{imb}.maxgzamp, abs(block.gz.amplitude));
+            ParentBlocks{ipb}.maxgzamp = max(ParentBlocks{ipb}.maxgzamp, abs(block.gz.amplitude));
         end
             
     end
 end
 
 % Set waveform amplitudes in parent blocks to max
-for imb = 1:length(ParentBlocks)
-    b = ParentBlocks{imb};   % shorthand
+for ipb = 1:length(ParentBlocks)
+    b = ParentBlocks{ipb};   % shorthand
     if ~isempty(b.rf)
         b.rf.signal = b.rf.signal/max(abs(b.rf.signal))*b.maxrfamp;
     end
@@ -141,10 +142,10 @@ end
 % save ParentBlocks ParentBlocks
 
 
-%% Write parent block files, in units suitable for the PulseGEq interpreter
-for imb = 1:length(ParentBlocks)
-    ofname = sprintf('parent%d.block', imb);
-    pulsegeq.writeblock(ofname, ParentBlocks{imb});
+%% Write parent block files for the PulseGEq interpreter
+for ipb = 1:length(ParentBlocks)
+    ofname = sprintf('parent%d.block', ipb);
+    pulsegeq.writeblock(ofname, ParentBlocks{ipb});
 end
 
 %% Write parentblocks.txt
@@ -155,9 +156,9 @@ end
 d = zeros(nt, 28);
 for ib = 1:nt
     block = seq.getBlock(ib);
-
-%    if MBID(ib) ~= 0  % if not a delay block
-%        d1 = getblocksettingsGEhardwareunits(block, MBID(ib));
+    d = getdynamics(block);
+%    if ParentBlockID(ib) ~= 0  % if not a delay block
+%        d1 = getblocksettingsGEhardwareunits(block, ParentBlockID(ib));
 end
 
 return

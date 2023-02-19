@@ -96,7 +96,7 @@ sys.nMaxModules   = 20;      % Not known at the moment, probably limited by tota
 sys.nMaxWaveforms = 200;     % Not known at the moment.
 
 %% Substitute specified system values
-sys = toppe.utils.vararg_pair(sys, varargin);
+sys = pulsegeq.utils.vararg_pair(sys, varargin);
 
 sys.gradient = lower(sys.gradient);
 

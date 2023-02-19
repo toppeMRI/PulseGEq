@@ -1,6 +1,6 @@
 function blk = readblock(fname)
 
-C = toppe.constants;
+C = pulsegeq.constants;
 
 fid = fopen(fname, 'r', 'ieee-be');
 
@@ -41,7 +41,7 @@ return
 
 function g = sub_readgrad(fid)
 
-C = toppe.constants;
+C = pulsegeq.constants;
 
 type = fread(fid, 1, 'int16');
 

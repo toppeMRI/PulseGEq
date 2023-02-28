@@ -6,6 +6,8 @@ function seq2ge(seqarg, systemGE, varargin)
 
 import pulsegeq.*
 
+C = pulsegeq.constants;
+
 %% parse inputs
 % Defaults
 arg.verbose = false;
@@ -77,17 +79,17 @@ end
 fprintf('\n');
 
 % Determine the parent of each block
-ParentBlockID = zeros(1,nt);   
+ParentBlockIDs = zeros(1,nt);   
 for ib = 1:nt
     block = seq.getBlock(ib);
 
     for ipb = 1:length(ParentBlocks)
         if compareblocks(block, ParentBlocks{ipb});
-            ParentBlockID(ib) = ipb; break;
+            ParentBlockIDs(ib) = ipb; break;
         end
     end
 
-    if ParentBlockID(ib) == 0  % delay block
+    if ParentBlockIDs(ib) == 0  % delay block
         %fprintf('Delay block found on line %d\n', ib);
     end
 end
@@ -100,7 +102,7 @@ for ipb = 1:length(ParentBlocks)
     ParentBlocks{ipb}.maxgzamp = 0;  
 
     for ib = 1:nt
-        if ParentBlockID(ib) ~= ipb
+        if ParentBlockIDs(ib) ~= ipb
             continue; 
         end
         block = seq.getBlock(ib);
@@ -146,6 +148,7 @@ fwrite(fid, -1, 'int16');  % marks end of blocks section
 
 %% Get cores (block groups) and write to file
 currentCoreID = []; 
+CoreIDs = zeros(1,nt);  % keep track of which core each block belongs to
 for ib = 1:nt
     if ~mod(ib, 500) | ib == nt
         for inb = 1:20
@@ -163,11 +166,13 @@ for ib = 1:nt
 
         % start new core
         currentCoreID = b.label.value;
-        blocks = ParentBlockID(ib); 
+        blocks = ParentBlockIDs(ib); 
     else
         % add block to currentCoreID
-        blocks = [blocks ParentBlockID(ib)];
+        blocks = [blocks ParentBlockIDs(ib)];
     end
+
+    CoreIDs(ib) = currentCoreID;
 end
 fprintf('\n');
 
@@ -175,29 +180,27 @@ pulsegeq.writecores(fid, cores);
     
 
 %% Get dynamic scan information and write to file
-
-%pulsegeq.write2loop('setup', systemGE, 'version', 6); 
 for ib = 1:nt
-    block = seq.getBlock(ib);
+    b = seq.getBlock(ib);
 
-    d = getdynamics(block); % dynamic settings (amplitudes etc) 
-
-    pbid = ParentBlockID(ib);
-
-%{
-    Gamplitude = [d.
-    pulsegeq.write2loop(ParentBlocks{pbid}.ofname, systemGE, ...
-        'Gamplitude',  Gamplitude, ...
-        'RFamplitude', RFamplitude, ...
-        'RFphase',     RFphase, ...
-        'DAQphase',    DAQphase, ...
-        'RFoffset',    RFoffset, ...
-        'slice',       slice, ...
-        'echo',        echo, ...
-        'view',        view);
-        %}
+    % dynamic settings (relative amplitudes etc)
+    coreID = CoreIDs(ib);
+    parentBlockID = ParentBlockIDs(ib); 
+    if parentBlockID ~= 0
+        parentBlock = ParentBlocks{parentBlockID}; 
+        d(ib,:) = getdynamics(b, parentBlock, parentBlockID, coreID);
+    end
 end
-%pulsegeq.write2loop('setup', systemGE, 'version', 6); 
+
+% Write number of events/rows in .seq file as two int16 with base 32766.
+% We do this because interpreter is already set up to read int16.
+fwrite(fid, floor(nt/C.MAXIAMP), 'int16');
+fwrite(fid, mod(nt, C.MAXIAMP), 'int16');
+for ib = 1:nt
+    if parentBlockID ~= 0
+        fwrite(fid, d(ib,:), 'int16');
+    end
+end
 
 %% Close output file
 fclose(fid);
@@ -205,12 +208,14 @@ fclose(fid);
 return
 
 
+%% EOF
 
 
 
 
 
 
+%% Old code
 if 1
     % get the next block, used to set textra column in scanloop.txt
     if ib < size(blockEvents,1)

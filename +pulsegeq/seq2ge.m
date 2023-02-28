@@ -1,7 +1,7 @@
-function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
-% function [moduleArr loopStructArr] = seq2ge(seqarg, systemGE, varargin)
+function seq2ge(seqarg, systemGE, varargin)
+% function seq2ge(seqarg, systemGE, varargin)
 %
-% Convert a Pulseq file (http://pulseq.github.io/) to a set of files
+% Convert a Pulseq file (http://pulseq.github.io/) to binary file
 % that can be executed on GE MR scanners. 
 
 import pulsegeq.*
@@ -10,8 +10,6 @@ import pulsegeq.*
 % Defaults
 arg.verbose = false;
 arg.debug = false;
-arg.pulseqVersion = 'v1.4.0';
-arg.tarFile = 'gescanfiles.tar';
 arg.nt      = [];
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
@@ -19,7 +17,6 @@ arg = pulsegeq.utils.vararg_pair(arg, varargin);
 
 
 %% Get seq object
-
 if isa(seqarg, 'char')
     seq = mr.Sequence();
     seq.read(seqarg);
@@ -30,20 +27,21 @@ else
     seq = seqarg;
 end
 
-% get contents of [BLOCKS] section
-nEvents = 7;   % Pulseq 1.4.0 
-blockEvents = cell2mat(seq.blockEvents);
-blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; 
-
-% set number of blocks (rows in .seq file) to step through
+% get number of blocks (rows in .seq file)
 if isempty(arg.nt)
+    nEvents = 7;   % Pulseq 1.4.0 
+    blockEvents = cell2mat(seq.blockEvents);
+    blockEvents = reshape(blockEvents, [nEvents, length(seq.blockEvents)]).'; 
     nt = size(blockEvents, 1);
 else
     nt = arg.nt;
 end
 
+%% Open output file
+fid = fopen('out.4ge', 'w', 'ieee-be');
 
-%% Create parent blocks
+
+%% Get parent blocks and write to file
 % parent blocks = unique up to a scaling factor, or phase/frequency offsets.
 % Contains waveforms with maximum amplitude across blocks.
 % First find unique blocks, then determine and set max amplitudes, then
@@ -57,7 +55,7 @@ for ib = 1:nt
         for inb = 1:20
             fprintf('\b');
         end
-        fprintf('Block %d/%d', ib, size(blockEvents, 1));
+        fprintf('Block %d/%d', ib, nt);
     end
 
     block = seq.getBlock(ib);
@@ -78,7 +76,7 @@ end
 
 fprintf('\n');
 
-% Determine which parent block each block 'belongs' to
+% Determine the parent of each block
 ParentBlockID = zeros(1,nt);   
 for ib = 1:nt
     block = seq.getBlock(ib);
@@ -139,20 +137,44 @@ for ipb = 1:length(ParentBlocks)
     end
 end
 
-% save ParentBlocks ParentBlocks
-
-
-%% Write parent block files for the PulseGEq interpreter
-for ipb = 1:length(ParentBlocks)
-    ParentBlocks{ipb}.ofname = sprintf('parent%d.block', ipb);
-    pulsegeq.writeblock(ParentBlocks{ipb}.ofname, ParentBlocks{ipb}, systemGE);
+% Write parent blocks to file
+for blockID = 1:length(ParentBlocks)
+    pulsegeq.writeblock(fid, blockID, ParentBlocks{blockID}, systemGE);
 end
-
-%% Write parentblocks.txt
-% TODO
+fwrite(fid, -1, 'int16');  % marks end of blocks section
 
 
-%% Write dynamic scan information to scanloop.txt
+%% Get cores (block groups) and write to file
+currentCoreID = []; 
+for ib = 1:nt
+    if ~mod(ib, 500) | ib == nt
+        for inb = 1:20
+            fprintf('\b');
+        end
+        fprintf('Block %d/%d', ib, nt);
+    end
+
+    b = seq.getBlock(ib);
+
+    if isfield(b, 'label')
+        if ~isempty(currentCoreID)  % wrap up the current core
+            cores{currentCoreID} = [currentCoreID length(blocks) blocks];
+        end
+
+        % start new core
+        currentCoreID = b.label.value;
+        blocks = ParentBlockID(ib); 
+    else
+        % add block to currentCoreID
+        blocks = [blocks ParentBlockID(ib)];
+    end
+end
+fprintf('\n');
+
+pulsegeq.writecores(fid, cores);
+    
+
+%% Get dynamic scan information and write to file
 
 %pulsegeq.write2loop('setup', systemGE, 'version', 6); 
 for ib = 1:nt
@@ -177,7 +199,13 @@ for ib = 1:nt
 end
 %pulsegeq.write2loop('setup', systemGE, 'version', 6); 
 
+%% Close output file
+fclose(fid);
+
 return
+
+
+
 
 
 

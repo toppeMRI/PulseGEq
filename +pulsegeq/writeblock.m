@@ -1,22 +1,17 @@
-function writeblock(ofname, blk, sys)
+function writeblock(fid, blk, sys)
 %
 % Write a Pulseq block to a custom machine-readable file format 
 % for the PulseGEq interpreter.
 
 sys.gamma = 4.2576e3;  % Hz/Gauss
 
-% open file for writing
-fid = fopen(ofname, 'w', 'ieee-be');
-
 % order is important
+fwrite(fid, round(blk.blockDuration*1e6), 'int16');
 sub_writerf(fid, blk.rf, sys);
 sub_writegrad(fid, blk.gx, sys);
 sub_writegrad(fid, blk.gy, sys);
 sub_writegrad(fid, blk.gz, sys);
 sub_writeadc(fid, blk.adc, sys);
-
-% done
-fclose(fid);
 
 return
 

@@ -53,6 +53,12 @@ for ib = 1:nt
     else
         gxAmp4ge = 0;
     end
+    if parentBlock.maxgyamp > 0
+        gyAmp = 2*round(0.5*b.gy.amplitude/parentBlock.maxgyamp*C.MAXIAMP);
+    end
+    if parentBlock.maxgzamp > 0
+        gzAmp = 2*round(0.5*b.gz.amplitude/parentBlock.maxgzamp*C.MAXIAMP);
+    end
 
     recphs4ge = 2*round(0.5*Dyn(ib,6)/pi*C.MAXIAMP);  % [pi, pi] = [-32766 32766]
 

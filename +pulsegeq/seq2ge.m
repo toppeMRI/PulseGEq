@@ -39,9 +39,6 @@ else
     nt = arg.nt;
 end
 
-%% Open output file
-fid = fopen('out.4ge', 'w', 'ieee-be');
-
 
 %% Get parent blocks and write to file
 % parent blocks = unique up to a scaling factor, or phase/frequency offsets.
@@ -139,12 +136,6 @@ for ipb = 1:length(ParentBlocks)
     end
 end
 
-% Write parent blocks to file
-for blockID = 1:length(ParentBlocks)
-    pulsegeq.writeblock(fid, blockID, ParentBlocks{blockID}, systemGE);
-end
-fwrite(fid, -1, 'int16');  % marks end of blocks section
-
 
 %% Get cores (block groups) and write to file
 currentCoreID = []; 
@@ -175,8 +166,6 @@ for ib = 1:nt
     CoreIDs(ib) = currentCoreID;
 end
 fprintf('\n');
-
-pulsegeq.writecores(fid, cores);
     
 
 %% Get dynamic scan information and write to file
@@ -192,18 +181,11 @@ for ib = 1:nt
     end
 end
 
-% Write number of events/rows in .seq file as two int16 with base 32766.
-% We do this because interpreter is already set up to read int16.
-fwrite(fid, floor(nt/C.MAXIAMP), 'int16');
-fwrite(fid, mod(nt, C.MAXIAMP), 'int16');
-for ib = 1:nt
-    if parentBlockID ~= 0
-        fwrite(fid, d(ib,:), 'int16');
-    end
-end
 
-%% Close output file
-fclose(fid);
+%% Write sequence to file
+
+pulsegeq.writeGEseq('out.4ge', systemGE, ParentBlocks, cores, d);
+
 
 return
 

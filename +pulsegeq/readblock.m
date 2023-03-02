@@ -1,4 +1,7 @@
 function blk = readblock(fname)
+% function blk = readblock(fname)
+% 
+% Read binary file created with writeblock()
 
 C = pulsegeq.constants;
 

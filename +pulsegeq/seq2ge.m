@@ -168,7 +168,7 @@ end
 fprintf('\n');
     
 
-%% Get dynamic scan information and write to file
+%% Get dynamic scan information
 for ib = 1:nt
     b = seq.getBlock(ib);
 

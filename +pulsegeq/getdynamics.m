@@ -1,42 +1,48 @@
-function Dyn = getdynamics4ge(b, parentBlock, parentBlockID, coreID)
+function Dyn = getdynamics(block, parentBlock, parentBlockID, coreID)
 % Return vector containing waveform amplitudes, RF/ADC phase, etc,
-% for a Pulseq block.
+% for a Pulseq block, in Pulseq units.
+%
+% block          Pulseq block obtained with getBlock()
+% parentBlock    Parent block that 'block' is a scaled version of
+% parentBlockID  int
+% coreID         int
 
 C = pulsegeq.constants;
 
 % define all members (simplifies file format -- does not impact scan)
-rfAmp = 0;       % Hz
-gxAmp = 0;       % Hz/m
-gyAmp = 0;
-gzAmp = 0;
+rfamp = 0;       % Hz
+gxamp = 0;       % Hz/m
+gyamp = 0;
+gzamp = 0;
 rfphs  = 0;      % radians
 rffreq = 0;      % Hz
 recphs = 0;      % radians
 
-if ~isempty(b.rf)
-    rfAmp = max(abs(b.rf.signal)); % Hz
-    rfphs = b.rf.phaseOffset;      % radians
-    rffreq = b.rf.freqOffset;      % Hz
+if ~isempty(block.rf)
+    rfamp = max(abs(block.rf.signal));
+    rfphs = block.rf.phaseOffset;
+    rffreq = block.rf.freqOffset;
 end
-if ~isempty(b.gx)
-    if parentBlock.maxgxamp > 0
-        gxAmp = 2*round(0.5*b.gx.amplitude/parentBlock.maxgxamp*C.MAXIAMP);
-    end
+if ~isempty(block.gx)
+%    if parentBlock.maxgxamp > 0
+        gxamp = block.gx.amplitude;
+%    end
 end
-if ~isempty(b.gy)
-    if parentBlock.maxgyamp > 0
-        gyAmp = 2*round(0.5*b.gy.amplitude/parentBlock.maxgyamp*C.MAXIAMP);
-    end
+if ~isempty(block.gy)
+%    if parentBlock.maxgyamp > 0
+        gyamp = block.gy.amplitude;
+%    end
 end
-if ~isempty(b.gz)
-    if parentBlock.maxgzamp > 0
-        gzAmp = 2*round(0.5*b.gz.amplitude/parentBlock.maxgzamp*C.MAXIAMP);
-    end
+if ~isempty(block.gz)
+%    if parentBlock.maxgzamp > 0
+        gzamp = block.gz.amplitude;
+%    end
 end
-if ~isempty(b.adc)
-    recphs = 2*round(0.5*b.adc.phaseOffset/pi*C.MAXIAMP);
+if ~isempty(block.adc)
+    %recphs = 2*round(0.5*block.adc.phaseOffset/pi*C.MAXIAMP);
+    recphs = block.adc.phaseOffset;
 end
 
-Dyn = [coreID parentBlockID rfAmp rfphs rffreq gxAmp gyAmp gzAmp recphs];
+Dyn = [coreID parentBlockID rfamp rfphs rffreq gxamp gyamp gzamp recphs];
     
     

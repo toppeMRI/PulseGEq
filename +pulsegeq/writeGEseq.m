@@ -18,37 +18,45 @@ end
 % Cores (block groups)
 pulsegeq.writecores(fid, Cores);
 
-% Dynamics (scan loop)
+%% Dynamics (scan loop)
 % Convert to hardware units (int16) suitable for execution on GE
 % using the PulseGEq interpreter.
+
 % Write number of events/rows in .seq file as two int16 with base 32766.
 % We do it this way because interpreter is already set up to read int16.
 nt = size(Dyn,1);
 fwrite(fid, floor(nt/C.MAXIAMP), 'int16');
 fwrite(fid, mod(nt, C.MAXIAMP), 'int16');
 
-for ib = 1:nt
-    % Dyn(ib, :) = [coreID parentBlockID rfAmp rfphs rffreq recphs gxAmp gyAmp gzAmp];
-    d = Dyn(ib, :);  % shorthand
+% defaults
+rfAmp = 0;       % int16
+gxAmp = 0;       % int16
+gyAmp = 0;
+gzAmp = 0;
+rfphs  = 0;      % int16. [-32766 32766] = [-pi pi]
+rffreq = 0;      % int16, Hz
+recphs = 0;      % int16. [-32766 32766] = [-pi pi]
 
+for ib = 1:nt
+    % Dyn(ib, :) = [coreID parentBlockID rfAmp rfphs rffreq gxAmp gyAmp gzAmp recphs];
     coreID = Dyn(ib,1);
 
     parentBlockID = Dyn(ib,2);
-    parentBlock = ParentBlocks{parentBlockID};
+    b = ParentBlocks{parentBlockID};
 
     if parentBlock.maxrfamp > 0
-        rfAmp = Dyn(ib,3);  % Hz
-        rfAmp4ge = 2*round(0.5*rfAmp/parentBlock.maxrfamp*C.MAXIAMP); % hardware units
+        rfAmp4ge = 2*round(0.5*Dyn(ib,3)/parentBlock.maxrfamp*C.MAXIAMP); % hardware units
+    else
+        rfAmp4ge = 0;
     end
 
     rfphs = Dyn(ib,4);   % radians
-    rfphs4ge = 2*round(0.5*rfphs/pi*C.MAXIAMP);    % [pi, pi] = [-32766 32766]
+    rfphs4ge = 2*round(0.5*Dyn(ib,4)/pi*C.MAXIAMP);    % [pi, pi] = [-32766 32766]
 
     rffreq4ge = round(Dyn(ib,5));  % Hz
 
-    gxAmp = Dyn(ib,6);             % Hz/m
     if pBlock.maxgxamp > 0
-        gxAmp4ge = 2*round(0.5*gxAmp/parentBlock.maxgxamp*C.MAXIAMP);
+        gxAmp4ge = 2*round(0.5*Dyn(ib,6)/parentBlock.maxgxamp*C.MAXIAMP);
     else
         gxAmp4ge = 0;
     end

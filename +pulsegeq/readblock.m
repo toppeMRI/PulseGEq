@@ -6,7 +6,7 @@ function blk = readblock(fid)
 C = pulsegeq.constants;
 
 blk.ID = fread(fid, 1, 'int16');
-blk.blockDuration = fread(fid, 1, 'int16')/1e6;  % sec
+blk.duration = fread(fid, 1, 'int16')/1e6;  % sec
 
 % rf
 type = fread(fid, 1, 'int16');

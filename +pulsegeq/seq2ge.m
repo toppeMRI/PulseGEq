@@ -152,7 +152,7 @@ for ib = 1:nt
 
     if isfield(b, 'label')
         if ~isempty(currentCoreID)  % wrap up the current core
-            cores{currentCoreID} = [currentCoreID length(blocks) blocks];
+            Cores{currentCoreID} = [currentCoreID length(blocks) blocks];
         end
 
         % start new core
@@ -184,7 +184,7 @@ end
 
 %% Write sequence to file
 
-pulsegeq.writeGEseq('out.4ge', systemGE, ParentBlocks, cores, d);
+pulsegeq.writeGEseq('out.4ge', systemGE, ParentBlocks, Cores, d);
 
 
 return
@@ -551,19 +551,19 @@ end
 toppe.write2loop('finish', systemGE);
 
 % Write cores.txt, which defines the block groups
-blockGroups = [];
+cores = [];
 for ie=1:length(loopStructArr)
-    bgID = loopStructArr(ie).blockGroupID;
+    bgID = loopStructArr(ie).coreID;
     modID = loopStructArr(ie).mod;
     if ~isempty(bgID)
         % start of group (will simply overwrite if already existing)
-        blockGroups{bgID} = modID;
+        cores{bgID} = modID;
         bgIDcurrent = bgID;
     else
-        blockGroups{bgIDcurrent} = [blockGroups{bgIDcurrent} modID];
+        cores{bgIDcurrent} = [cores{bgIDcurrent} modID];
     end
 end
-toppe.writecoresfile(blockGroups);
+toppe.writecoresfile(cores);
 
 % Write TOPPE .entry file.
 % This can be edited by hand as needed after copying to scanner.

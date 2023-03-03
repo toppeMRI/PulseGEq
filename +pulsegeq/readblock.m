@@ -1,11 +1,12 @@
-function blk = readblock(fname)
-% function blk = readblock(fname)
+function blk = readblock(fid)
+% function blk = readblock(fid)
 % 
 % Read binary file created with writeblock()
 
 C = pulsegeq.constants;
 
-fid = fopen(fname, 'r', 'ieee-be');
+blk.ID = fread(fid, 1, 'int16');
+blk.blockDuration = fread(fid, 1, 'int16')/1e6;  % sec
 
 % rf
 type = fread(fid, 1, 'int16');
@@ -37,8 +38,6 @@ else
     blk.adc = [];
 end
 
-fclose(fid);
-
 return
 
 
@@ -53,8 +52,8 @@ if type == C.NULL
     return;
 end
 
-delayus = fread(fid, 1, 'int16');
-g.delay = delayus/1e6;  % sec
+delay_us = fread(fid, 1, 'int16');
+g.delay = delay_us/1e6;  % sec
 g.amplitude = fread(fid, 1, 'int16')/C.GSCALE;   % Gauss/cm
 
 if type == C.TRAP

@@ -58,11 +58,11 @@ g.amplitude = fread(fid, 1, 'int16')/C.GSCALE;   % Gauss/cm
 
 if type == C.TRAP
     g.type = 'trap';
-    g.riseTime = fread(fid, 1, 'int16')/1e6;
+    g.riseTime = fread(fid, 1, 'int16')/1e6;   % sec
     g.flatTime = fread(fid, 1, 'int16')/1e6;
     g.fallTime = fread(fid, 1, 'int16')/1e6;
 else
-    % TODO
+    % TODO: handle arbitrary gradients 
 end
 
 return

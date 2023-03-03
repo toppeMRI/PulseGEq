@@ -43,8 +43,7 @@ end
 %% Get parent blocks and write to file
 % parent blocks = unique up to a scaling factor, or phase/frequency offsets.
 % Contains waveforms with maximum amplitude across blocks.
-% First find unique blocks, then determine and set max amplitudes, then
-% write to .block files
+% First find unique blocks, then determine and set max amplitudes.
 
 % Get unique blocks
 ParentBlocks{1} = seq.getBlock(1);
@@ -59,7 +58,7 @@ for ib = 1:nt
 
     block = seq.getBlock(ib);
 
-    % ignore delay blocks for now. TODO
+    % delay blocks are handled separately (no parent block assigned)
     if (isempty(block.rf) & isempty(block.gx) & isempty(block.gy) & ...
         isempty(block.gz) & isempty(block.adc))
         continue;
@@ -75,19 +74,15 @@ end
 
 fprintf('\n');
 
-% Determine the parent of each block
+% Determine the parent of each block.
+% Pure delay blocks are assigned parent block ID = 0
 ParentBlockIDs = zeros(1,nt);   
 for ib = 1:nt
     block = seq.getBlock(ib);
-
     for ipb = 1:length(ParentBlocks)
         if compareblocks(block, ParentBlocks{ipb});
             ParentBlockIDs(ib) = ipb; break;
         end
-    end
-
-    if ParentBlockIDs(ib) == 0  % delay block
-        %fprintf('Delay block found on line %d\n', ib);
     end
 end
 
@@ -115,11 +110,10 @@ for ipb = 1:length(ParentBlocks)
         if ~isempty(block.gz)
             ParentBlocks{ipb}.maxgzamp = max(ParentBlocks{ipb}.maxgzamp, abs(block.gz.amplitude));
         end
-            
     end
 end
 
-% Set waveform amplitudes in parent blocks to max
+% Set parent block waveform amplitudes to max
 for ipb = 1:length(ParentBlocks)
     b = ParentBlocks{ipb};   % shorthand
     if ~isempty(b.rf)
@@ -171,13 +165,10 @@ fprintf('\n');
 %% Get dynamic scan information
 for ib = 1:nt
     b = seq.getBlock(ib);
-
-    % dynamic settings (relative amplitudes etc)
-    coreID = CoreIDs(ib);
     parentBlockID = ParentBlockIDs(ib); 
     if parentBlockID ~= 0
         parentBlock = ParentBlocks{parentBlockID}; 
-        d(ib,:) = getdynamics(b, parentBlock, parentBlockID, coreID);
+        d(ib,:) = getdynamics(b, parentBlock, parentBlockID, CoreIDs(ib));
     end
 end
 

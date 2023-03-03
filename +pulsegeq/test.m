@@ -22,7 +22,7 @@ end
 
 % test writeGEseq.m and readGEseq.m
 if true
-    pulsegeq.seq2ge(seqFile, sys, 'nt', 20);  % creates out.4ge
+    pulsegeq.seq2ge(seqFile, sys);  % creates out.4ge
     [ParentBlocks, Cores, Dyn] = pulsegeq.readGEseq('out.4ge');
     b = seq.getBlock(1)
     ParentBlocks{1}

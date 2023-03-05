@@ -31,11 +31,13 @@ nt = size(Dyn,1);
 fwrite(fid, floor(nt/C.MAXIAMP), 'int16');
 fwrite(fid, mod(nt, C.MAXIAMP), 'int16');
 
-% defaults
-rfScale = 0;   % RF amplitude scaling, int16
-gxScale = 0; 
-gyScale = 0; 
-gzScale = 0; 
+% defaults. A value of -1 tells the interpreter that no pulse exists
+% for that entry.
+rfScale = -1;   % RF amplitude scaling, int16
+gxScale = -1;   % Gx amplitude scaling, int16 
+gyScale = -1; 
+gzScale = -1; 
+recPhsScale = -1;  % rec phase, int16.
 
 for ib = 1:nt
     coreID = Dyn(ib,1);

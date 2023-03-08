@@ -60,8 +60,10 @@ for ax = {'gx','gy','gz'};
                 grad.tt = [grad.raster/2; (grad.tt + grad.raster)];
             end
             if abs(grad.waveform(end)) > 0
-                grad.waveform = [grad.waveform; 0];
-                grad.tt = [grad.tt; (grad.tt(end) + grad.raster)];
+                % Add 2 sample ramp to zero.
+                % This is a hack to deal with pathological case in some .seq files.
+                grad.waveform = [grad.waveform; grad.waveform(end)/2; 0];
+                grad.tt = [grad.tt; [grad.tt(end) + grad.raster*[1;2]]];
             end
 
             % interpolate to GE raster time

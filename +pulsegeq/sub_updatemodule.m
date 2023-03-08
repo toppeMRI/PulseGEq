@@ -32,7 +32,7 @@ if ~isempty(block.rf)
     % interpolate to GE raster time (4us)
     %rf = downsample(block.rf.signal, round(dt/1e-6));     % downsample from 1us to 4us (GE raster time)
     tge = block.rf.t(1) : system.raster : block.rf.t(end);
-    rf = interp1(block.rf.t, block.rf.signal, tge);     % downsample from 1us to 4us (GE raster time)
+    rf = interp1(block.rf.t, block.rf.signal, tge, 'linear', 'extrap');     % downsample from 1us to 4us (GE raster time)
     %if ( length(block.rf.signal) > 24 )
     %else
     %   rf = block.rf.signal;                               % assumed to be already decimated in terms of dt_ge
@@ -67,7 +67,7 @@ for ax = {'gx','gy','gz'};
             % interpolate to GE raster time
             % TODO: shift by dt/2?
             tge = 0:dt:(max(grad.tt)-0*dt);
-            wav = interp1(grad.tt, grad.waveform, tge);   % interpolate to GE raster time (4us)
+            wav = interp1(grad.tt, grad.waveform, tge, 'linear', 'extrap');   % interpolate to GE raster time (4us)
             wav(isnan(wav)) = 0;                         % must be due to interp1
             if wav(1) > 0
                 wav = [0; wav(:)];

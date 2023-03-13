@@ -209,8 +209,8 @@ for ib = (arg.ibstart+1):nt
                 eval(sprintf('wav1 = moduleArr(ic).%s(:,iwav);', ax));
                 eval(sprintf('wav2 = modCandidate.%s;', ax));
                 if strcmp(ax, 'rf')
-                    wav1 = abs(wav1);
-                    wav2 = abs(wav2);
+                    %wav1 = abs(wav1);
+                    %wav2 = abs(wav2);
                 end
                 isSameShape(ii,iwav) = norm(wav1-wav2,1) < tol;
             end

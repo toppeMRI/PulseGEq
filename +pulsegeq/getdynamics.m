@@ -1,6 +1,6 @@
 function Dyn = getdynamics(block, parentBlock, parentBlockID, coreID)
 % Return vector containing waveform amplitudes, RF/ADC phase, etc,
-% for a Pulseq block, in Pulseq units.
+% for a Pulseq block, in physical (Pulseq) units.
 %
 % block          Pulseq block obtained with getBlock()
 % parentBlock    Parent block that 'block' is a scaled version of

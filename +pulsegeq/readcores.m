@@ -8,7 +8,7 @@ nCores = fread(fid, 1, 'int16');
 for ic = 1:nCores
     coreID = fread(fid, 1, 'int16');
     nBlocksInCore = fread(fid, 1, 'int16');
-    blockIDs = fread(fid, nBlocksInCore, 'int16')
+    blockIDs = fread(fid, nBlocksInCore, 'int16');
     Cores{ic} = [coreID nBlocksInCore blockIDs'];
 end
     

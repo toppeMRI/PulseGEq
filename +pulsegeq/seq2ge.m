@@ -172,7 +172,6 @@ for ib = 1:nt
     end
 end
 
-
 %% Write sequence to file
 
 pulsegeq.writeGEseq('out.4ge', systemGE, ParentBlocks, Cores, d);

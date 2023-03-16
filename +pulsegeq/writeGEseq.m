@@ -6,7 +6,7 @@ function writeGEseq(fname, systemGE, ParentBlocks, Cores, Dyn)
 % systemGE       struct containing scanner system info, see systemspecs.m
 % ParentBlocks   cell array of Pulseq blocks 
 % Cores          block group definitions 
-% Dyn            dynamic scan information (see getdynamics.m)
+% Dyn            dynamic scan information, in physical units (see getdynamics.m)
 
 C = pulsegeq.constants;
 
@@ -31,15 +31,15 @@ nt = size(Dyn,1);
 fwrite(fid, floor(nt/C.MAXIAMP), 'int16');
 fwrite(fid, mod(nt, C.MAXIAMP), 'int16');
 
-% defaults. A value of -1 tells the interpreter that no pulse exists
-% for that entry.
-rfScale = -1;   % RF amplitude scaling, int16
-gxScale = -1;   % Gx amplitude scaling, int16 
-gyScale = -1; 
-gzScale = -1; 
-recPhsScale = -1;  % rec phase, int16.
-
 for ib = 1:nt
+    % Defaults. A value of -1 tells the interpreter that no pulse exists
+    % for that entry.
+    rfScale = -1;   % RF amplitude scaling, int16
+    gxScale = -1;   % Gx amplitude scaling, int16 
+    gyScale = -1; 
+    gzScale = -1; 
+    recPhsScale = -1;  % rec phase, int16.
+
     coreID = Dyn(ib,1);
 
     parentBlockID = Dyn(ib,2);
@@ -65,7 +65,8 @@ for ib = 1:nt
             gzScale = 2*round(0.5*Dyn(ib,8)/parentBlock.maxgzamp*C.MAXIAMP);
         end
 
-        recPhsScale= 2*round(0.5*Dyn(ib,9)/pi*C.MAXIAMP);  %  int16: [-32766 32766] = [-pi pi]
+        phs_rad = angle(exp(1i*Dyn(ib,9)));
+        recPhsScale= 2*round(0.5*phs_rad/pi*C.MAXIAMP); %  int16: [-32766 32766] = [-pi pi]
 
         d = [coreID parentBlockID rfScale rfPhsScale rfFreq gxScale gyScale gzScale recPhsScale];
         fwrite(fid, d, 'int16');

@@ -65,7 +65,7 @@ for ib = 1:nt
             gzScale = 2*round(0.5*Dyn(ib,8)/parentBlock.maxgzamp*C.MAXIAMP);
         end
 
-        phs_rad = angle(exp(1i*Dyn(ib,9)));
+        phs_rad = angle(exp(1i*Dyn(ib,9)));  % wrap to [-pi pi] range
         recPhsScale= 2*round(0.5*phs_rad/pi*C.MAXIAMP); %  int16: [-32766 32766] = [-pi pi]
 
         d = [coreID parentBlockID rfScale rfPhsScale rfFreq gxScale gyScale gzScale recPhsScale];

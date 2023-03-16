@@ -53,7 +53,8 @@ for ib = 1:nt
             rfScale = 2*round(0.5*Dyn(ib,3)/parentBlock.maxrfamp*C.MAXIAMP); % hardware units
         end
 
-        rfPhsScale = 2*round(0.5*Dyn(ib,4)/pi*C.MAXIAMP);    % int16: [-32766 32766] = [-pi pi]
+        phs_rad = angle(exp(1i*Dyn(ib,4)));  % wrap to [-pi pi] range
+        rfPhsScale = 2*round(0.5*phs_rad/pi*C.MAXIAMP);    % int16: [-32766 32766] = [-pi pi]
 
         rfFreq = round(Dyn(ib,5));  % int16. Hz
 
@@ -77,13 +78,6 @@ for ib = 1:nt
             else
                 gzArbScale = 2*round(0.5*Dyn(ib,8)/parentBlock.maxgzamp*C.MAXIAMP);
             end
-        end
-
-        if parentBlock.maxgyamp > 0
-            gyScale = 2*round(0.5*Dyn(ib,7)/parentBlock.maxgyamp*C.MAXIAMP);
-        end
-        if parentBlock.maxgzamp > 0
-            gzScale = 2*round(0.5*Dyn(ib,8)/parentBlock.maxgzamp*C.MAXIAMP);
         end
 
         if Dyn(ib,9) ~= -99

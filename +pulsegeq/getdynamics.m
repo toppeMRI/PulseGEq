@@ -16,7 +16,7 @@ gyamp = 0;
 gzamp = 0;
 rfphs  = 0;      % radians
 rffreq = 0;      % Hz
-recphs = 0;      % radians
+recphs = -99;    % radians. Value of -99 = no ADC
 
 if ~isempty(block.rf)
     rfamp = max(abs(block.rf.signal));

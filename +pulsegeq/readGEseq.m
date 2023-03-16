@@ -16,7 +16,7 @@ n1 = fread(fid, 1, 'int16');
 n2 = fread(fid, 1, 'int16');
 nt = n1*C.MAXIAMP + n2;
 for ib = 1:nt-20
-    Dyn(ib, :) = fread(fid, 9, 'int16');
+    Dyn(ib, :) = fread(fid, 12, 'int16');
 end
 
 fclose(fid);

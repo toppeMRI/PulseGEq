@@ -35,10 +35,12 @@ for ib = 1:nt
     % Defaults. A value of -1 tells the interpreter that no pulse exists
     % for that entry.
     rfScale = -1;   % RF amplitude scaling, int16
-    gxScale = -1;   % Gx amplitude scaling, int16 
-    gyScale = -1; 
-    gzScale = -1; 
-    recPhsScale = -1;  % rec phase, int16.
+    gxTrapScale = -1;   % Gx trapezoid amplitude scaling, int16 
+    gyTrapScale = -1;
+    gzTrapScale = -1;
+    gxArbScale = -1;       % Gx arbitrary waveform amplitude scaling, int16 
+    gyArbScale = -1; 
+    gzArbScale = -1; 
 
     coreID = Dyn(ib,1);
 
@@ -55,9 +57,28 @@ for ib = 1:nt
 
         rfFreq = round(Dyn(ib,5));  % int16. Hz
 
-        if parentBlock.maxgxamp > 0
-            gxScale = 2*round(0.5*Dyn(ib,6)/parentBlock.maxgxamp*C.MAXIAMP);
+        if ~isempty(parentBlock.gx)
+            if strcmp(parentBlock.gx.type, 'trap')
+                gxTrapScale = 2*round(0.5*Dyn(ib,6)/parentBlock.maxgxamp*C.MAXIAMP);
+            else
+                gxArbScale = 2*round(0.5*Dyn(ib,6)/parentBlock.maxgxamp*C.MAXIAMP);
+            end
         end
+        if ~isempty(parentBlock.gy)
+            if strcmp(parentBlock.gy.type, 'trap')
+                gyTrapScale = 2*round(0.5*Dyn(ib,7)/parentBlock.maxgyamp*C.MAXIAMP);
+            else
+                gyArbScale = 2*round(0.5*Dyn(ib,7)/parentBlock.maxgyamp*C.MAXIAMP);
+            end
+        end
+        if ~isempty(parentBlock.gz)
+            if strcmp(parentBlock.gz.type, 'trap')
+                gzTrapScale = 2*round(0.5*Dyn(ib,8)/parentBlock.maxgzamp*C.MAXIAMP);
+            else
+                gzArbScale = 2*round(0.5*Dyn(ib,8)/parentBlock.maxgzamp*C.MAXIAMP);
+            end
+        end
+
         if parentBlock.maxgyamp > 0
             gyScale = 2*round(0.5*Dyn(ib,7)/parentBlock.maxgyamp*C.MAXIAMP);
         end
@@ -72,8 +93,8 @@ for ib = 1:nt
             recPhsScale = -1;
         end
 
-        d = [coreID parentBlockID rfScale rfPhsScale rfFreq gxScale gyScale gzScale recPhsScale];
-        fwrite(fid, d, 'int16');
+        Dyn_hw = [coreID parentBlockID rfScale rfPhsScale rfFreq gxTrapScale gyTrapScale gzTrapScale gxArbScale gyArbScale gzArbScale recPhsScale];
+        fwrite(fid, Dyn_hw, 'int16');
     end
 end
 

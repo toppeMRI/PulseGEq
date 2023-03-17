@@ -9,3 +9,5 @@ C.MAXIAMP = 2^15-2;
 % internal constants used to avoid writing floats to .mod file
 C.RFSCALE = 1e4;  
 C.GSCALE = 3000;  
+
+C.LITTLEENDIAN = true;

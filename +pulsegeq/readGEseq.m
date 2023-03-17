@@ -2,12 +2,17 @@ function [ParentBlocks, Cores, Dyn] = readGEseq(fname)
 
 C = pulsegeq.constants();
 
-fid = fopen(fname, 'r', 'ieee-be');
+if C.LITTLEENDIAN
+    fid = fopen(fname, 'r', 'ieee-le');
+else
+    fid = fopen(fname, 'r', 'ieee-be');
+end
 
-nParentBlocks = fread(fid, 1, 'int16');
+nParentBlocks = fread(fid, 1, 'int16')
 for blockID = 1:nParentBlocks
     ParentBlocks{blockID} = pulsegeq.readblock(fid);
 end
+return
 
 Cores = pulsegeq.readcores(fid);
 

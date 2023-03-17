@@ -10,7 +10,11 @@ function writeGEseq(fname, systemGE, ParentBlocks, Cores, Dyn)
 
 C = pulsegeq.constants;
 
-fid = fopen(fname, 'w', 'ieee-be');
+if C.LITTLEENDIAN
+    fid = fopen(fname, 'w', 'ieee-le');
+else
+    fid = fopen(fname, 'w', 'ieee-be');
+end
 
 %% Parent blocks
 fwrite(fid, length(ParentBlocks), 'int16');  % number of parent blocks

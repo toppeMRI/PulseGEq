@@ -16,8 +16,8 @@ Cores = pulsegeq.readcores(fid);
 Dyn = [];
 
 % dynamics (scan loop)
-n1 = fread(fid, 1, 'int16')
-n2 = fread(fid, 1, 'int16')
+n1 = fread(fid, 1, 'int16');
+n2 = fread(fid, 1, 'int16');
 nt = n1*C.MAXIAMP + n2
 
 for ib = 1:nt

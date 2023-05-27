@@ -93,3 +93,11 @@ $ git checkout -
 ```
 pulsegeq.seq2ge('gre-jemris.seq', 'pulseqVersion', 'v1.2.1');
 ```
+
+
+## FURTHER DETAILS AND MISCELLANEOUS NOTES
+
+TODO
+   * follow variable naming convention used in the TOPPE interpreter code (See v6 README.md file).
+   *
+

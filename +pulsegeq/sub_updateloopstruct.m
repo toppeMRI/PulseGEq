@@ -1,4 +1,4 @@
-%% Update/initialize loopStructArr 
+%% Update/initialize loop struct
 function arg = sub_updateloopstruct(arg, block, nextblock, system, varargin)
 %
 % Fill struct containing entries for one row in scanloop.txt 
@@ -13,7 +13,7 @@ function arg = sub_updateloopstruct(arg, block, nextblock, system, varargin)
 
 import pulsegeq.*
 
-% Initialize loopStruct struct
+% Initialize loop struct
 if isempty(arg)
     % Defaults
     arg.mod   = 1;           % module number. Positive integer (starts at 1).
@@ -32,6 +32,8 @@ if isempty(arg)
     arg.rffreq = 0;          % RF transmit frequency offset (Hz)
     arg.wavnum = 1;          % waveform number (rf/grad waveform array column index). Non-zero positive integer.
     arg.rotmat = eye(3);     % 3x3 rotation matrix (added to toppev3)
+    arg.trig = 0;            % cardiac trigger? (0 or 1)
+    arg.trigout = 0;         % play TTL trigger out as specified in modules.txt? (0 or 1)
     arg.blockGroupID = [];
 end
 
@@ -69,11 +71,16 @@ if ~isempty(block)
         end
     end
 
+    % add trigger
+    if isfield(block, 'trig')
+        arg.trigout = 1;
+    end
+
     % rf amplitude, phase, freq
     if ~isempty(block.rf)
         arg.rfamp = max(abs(block.rf.signal)/system.gamma);    % Gauss
         arg.rfphs = block.rf.phaseOffset;                      % radians
-        arg.rffreq = round(block.rf.freqOffset);                      % Hz
+        arg.rffreq = round(block.rf.freqOffset);               % Hz
     end
 
     % receive phase

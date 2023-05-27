@@ -42,9 +42,9 @@ if ~isempty(block.rf)
     % add delay
     rf = [linspace(0, 0, round(block.rf.delay/dt))'; rf.'];
 
-    % Normalize and add to waveforms (loopStructArr array will contain rf amplitude for each block)
+    % Normalize shapes and add to waveform group
     rf = rf/max(abs(rf(:)));
-    module.rf = sub_addwav(module.rf, rf);         % Normalized to amplitude 1
+    module.rf = sub_addwav(module.rf, rf);    % Normalized to amplitude 1
 end
 
 % Gradients
@@ -114,7 +114,7 @@ if module.hasADC & length([module.rf(:); module.gx(:); module.gy(:); module.gz(:
 end
 
 % store waveform length (useful for comparing blocks)
-nt = max([ length(module.rf) length(module.gx) ...
+res = max([ length(module.rf) length(module.gx) ...
            length(module.gy) length(module.gz) ...
            nAdc]);
 
@@ -123,19 +123,32 @@ npulses = 0;
 if ~isempty(module.rf)
     wav = module.rf;
     npulses = size(wav,2);
-    module.rf = [wav; zeros(nt-size(wav,1), size(wav,2))];
+    module.rf = [wav; zeros(res-size(wav,1), size(wav,2))];
 end
 gradChannels = {'gx','gy','gz'};
 for ii=1:length(gradChannels)
     eval(sprintf('wav = module.%s;', gradChannels{ii}));
     if ~isempty(wav)
         npulses = size(wav,2);
-        wav = [wav; zeros(nt-size(wav,1), size(wav,2))];
+        wav = [wav; zeros(res-size(wav,1), size(wav,2))];
         eval(sprintf('module.%s= wav;', gradChannels{ii}));
     end
 end
 
-module.nt = nt;
+module.res = res;
 module.npulses = npulses;
+
+% set npre (RF/ADC delay, in number of 4us samples),
+% and rfres (duration of RF/ADC, in number of 4us samples)
+if module.hasADC
+    module.npre = round(block.adc.delay/dt);
+    module.rfres = nAdc;
+elseif module.hasRF
+    module.npre = round(block.rf.delay/dt);
+    module.rfres = length(module.rf);
+else
+    module.npre = 0;
+    module.rfres = module.res;
+end
 
 return

@@ -1,5 +1,5 @@
-function [parentModules loop] = seq2ge(seqarg, systemGE, varargin)
-% function [parentModules loop] = seq2ge(seqarg, systemGE, varargin)
+function [modules loop] = seq2ge(seqarg, systemGE, varargin)
+% function [modules loop] = seq2ge(seqarg, systemGE, varargin)
 %
 % Convert a Pulseq file (http://pulseq.github.io/) to a set of TOPPE files
 % that can be executed on GE MR scanners. 
@@ -69,13 +69,13 @@ else
     seq = seqarg;
 end
 
-%% Loop through blocks and build 'parentModules' and 'loop'
+%% Loop through blocks and build 'modules' and 'loop'
 
-% 'parentModules' struct array
+% 'modules' struct array
 % Find blocks that are unique in terms of waveforms and timing 
 % (i.e., waveform amplitudes, RF/ADC phase, etc can differ),
-% and fill 'parentModules' array accordingly. 
-% Each element of 'parentModules' is a struct containing all waveforms 
+% and fill 'modules' array accordingly. 
+% Each element of 'modules' is a struct containing all waveforms 
 % belonging to one module (.mod file), and other module info.
 % The usage of the word "module" here is consistent with its usage in TOPPE.
 
@@ -87,7 +87,7 @@ end
 % Each entry in this array contains information needed to fill out one row of scanloop.txt.
 
 if arg.verbose
-    fprintf('Filling parentModules struct array, and loop array.\n' );
+    fprintf('Filling modules struct array, and loop array.\n' );
 end
 
 % get contents of [BLOCKS] section
@@ -105,9 +105,9 @@ else
     nt = arg.nt;
 end
 
-% First entry in 'parentModules' struct array
+% First entry in 'modules' struct array
 block = seq.getBlock(arg.nstart);
-parentModules(1) = pulsegeq.sub_block2module(block, arg.nstart, systemGE, 1);
+modules(1) = pulsegeq.sub_block2module(block, arg.nstart, systemGE, 1);
 
 % First entry in 'loop' struct array (first block is by definition a module)
 nextBlock = seq.getBlock(arg.nstart+1);   % needed to set 'textra' in scanloop.txt
@@ -135,9 +135,6 @@ for n = (arg.nstart+1):nt
     else
         nextBlock = [];
     end
-%    if isfield(nextBlock, 'trig') 
-%        nextBlock = [];
-%    end
 
     % Empty (pure delay) blocks are accounted for in 'textra' in the previous row in scanloop.txt
     if isempty(block.rf) & isempty(block.adc) ...
@@ -165,24 +162,24 @@ for n = (arg.nstart+1):nt
     end
 
     % create a TOPPE module struct from current Pulseq block
-    moduleCandidate = pulsegeq.sub_block2module(block, n, systemGE, length(parentModules) + 1);
+    moduleCandidate = pulsegeq.sub_block2module(block, n, systemGE, length(modules) + 1);
 
     % Is there an existing module that can be reused (scaled)?
-    % Specifically, does one of the existing modules (elements of parentModules vector) have 
+    % Specifically, does one of the existing modules (elements of modules vector) have 
     % the same length waveform, the same non-empty rf/gx/gy/gz,
     % and the same value of 'hasRF' and 'hasADC', as moduleCandidate?
     isUnique = 1; 
-    for p = 1:length(parentModules)
-        if (parentModules(p).nt == moduleCandidate.nt ...
-            & isempty(parentModules(p).rf) == isempty(moduleCandidate.rf) ...
-            & isempty(parentModules(p).gx) == isempty(moduleCandidate.gx) ...
-            & isempty(parentModules(p).gy) == isempty(moduleCandidate.gy) ...
-            & isempty(parentModules(p).gz) == isempty(moduleCandidate.gz) ...
-            & parentModules(p).hasRF  == moduleCandidate.hasRF ...
-            & parentModules(p).hasADC == moduleCandidate.hasADC ...
+    for p = 1:length(modules)
+        if (modules(p).res == moduleCandidate.res ...
+            & isempty(modules(p).rf) == isempty(moduleCandidate.rf) ...
+            & isempty(modules(p).gx) == isempty(moduleCandidate.gx) ...
+            & isempty(modules(p).gy) == isempty(moduleCandidate.gy) ...
+            & isempty(modules(p).gz) == isempty(moduleCandidate.gz) ...
+            & modules(p).hasRF  == moduleCandidate.hasRF ...
+            & modules(p).hasADC == moduleCandidate.hasADC ...
             )
             isUnique = 0;
-            break;   % break out of 'for p' loop. 'p' now has the value of a module we'll reuse
+            break;   % break out of 'p' loop. 'p' now has the value of a module we'll reuse
         end
     end
 
@@ -191,14 +188,14 @@ for n = (arg.nstart+1):nt
         if arg.verbose
             fprintf('\tFound new module at block %d\n', n);
         end
-        parentModules(end+1) = moduleCandidate;
+        modules(end+1) = moduleCandidate;
         loop(n) = pulsegeq.sub_updateloopstruct([], block, nextBlock, systemGE, ...
-            'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(parentModules));
+            'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(modules));
         continue; % done, so move on to next block (n loop)
     end
 
     % moduleCandidate is not unique and has the same waveform length as an existing module, 
-    % so now check to see if all waveform shapes in moduleCandidate match those in parentModules(ic).
+    % so now check to see if all waveform shapes in moduleCandidate match those in modules(ic).
     % If not, add waveform to module waveform group.
 
     tol = 1e-3;  % Shape is deemed equal if sum(abs(difference)) < tol
@@ -208,8 +205,8 @@ for n = (arg.nstart+1):nt
         ax = cell2mat(ax);
         ch = block.(ax);
         if ~isempty(ch)
-            for w = 1:parentModules(p).npulses  % Loop variable name 'w' here is consistent with usage in interpreter
-                eval(sprintf('wav1 = parentModules(p).%s(:,w);', ax));
+            for w = 1:modules(p).npulses  % Loop variable name 'w' here is consistent with usage in interpreter
+                eval(sprintf('wav1 = modules(p).%s(:,w);', ax));
                 eval(sprintf('wav2 = moduleCandidate.%s;', ax));
                 isSameShape(ii,w) = norm(wav1-wav2,1) < tol;
             end
@@ -226,10 +223,10 @@ for n = (arg.nstart+1):nt
         loop(n) = pulsegeq.sub_updateloopstruct([], block, nextBlock, systemGE, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', p, 'wavnum', wReuse);
     else
-        % Found a new set of shapes, so add this waveform set to parentModules(p)
-        parentModules(p) = pulsegeq.sub_updatemodule(parentModules(p), block, n, systemGE);
+        % Found a new set of shapes, so add this waveform set to modules(p)
+        modules(p) = pulsegeq.sub_updatemodule(modules(p), block, n, systemGE);
         loop(n) = pulsegeq.sub_updateloopstruct([], block, nextBlock, systemGE, ... 
-            'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', p, 'wavnum', parentModules(p).npulses);
+            'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', p, 'wavnum', modules(p).npulses);
     end
 
 end
@@ -241,26 +238,8 @@ else
 end
 
 
-%% Optional: As an intermediate check, we can now display the sequence in still/movie mode
-%% Example:
-if false
-    % still frame
-    nstart = 1; nstop = 20;
-    [rf,gx,gy,gz] = pulsegeq.sub_plotseq(parentModules,loop,nstart,nstop);
-
-    % movie
-    nBlocksPerTR = 5;
-    pulsegeq.sub_playseq(parentModules, loop, nBlocksPerTR, nTRskip, tpause);
-   pulsegeq.sub_playseq(modArr, loopArr, nBlocksPerTR);
-   pulsegeq.sub_playseq(modArr, loopArr, 5, 'gradMode', 'slew', 'tpause', 0.5);
-end
-
-
-%% Hopefully the sequence looks correct (pulsegeq.sub_playseq()), so now we need to write the
-%% TOPPE files.
-
-
-%% First, write each module to a .mod file
+%% First, write each module to a .mod file.
+%% Write modules.txt along the way.
 if arg.verbose
     fprintf(1, 'Writing .mod files and modules.txt...\n');
 end
@@ -268,44 +247,44 @@ end
 % write modules.txt header
 fid = fopen('modules.txt','w');
 fprintf(fid,'Total number of unique cores\n');
-fprintf(fid,'%d\n', length(parentModules));
+fprintf(fid,'%d\n', length(modules));
 fprintf(fid,'wavfile_name    duration (us)     has_RF?     has_ADC?\n');
 
-% loop through parentModules
-for p = 1:length(parentModules)
+% loop through modules
+for p = 1:length(modules)
 
-    hasadc = parentModules(p).hasADC;
-    hasrf  = parentModules(p).hasRF;
+    hasADC = modules(p).hasADC;
+    hasRF  = modules(p).hasRF;
 
-    if hasrf & hasadc
+    if hasRF & hasADC
         error('Cannot transmit RF and acquire data in same block. Redesign the .seq file.');
     end
 
-    % waveforms in parentModules are normalized, so now we need to scale to physical units
+    % waveforms in modules are normalized, so now we scale to physical units
     rf = [];
     gx = [];
     gy = [];
     gz = [];
-    if hasrf
-        for ii = 1:parentModules(p).npulses
-            rfmax= 0;
+    if hasRF
+        for w = 1:modules(p).npulses
+            rfmax = 0;
             for n = 1:length(loop)
-                if loop(n).mod == p & loop(n).wavnum == ii
+                if loop(n).mod == p & loop(n).wavnum == w
                     rfmax = max(loop(n).rfamp, rfmax);
                 end
             end
-            rf(:,ii) = rfmax * parentModules(p).rf(:,ii);
-            RFmax(p,ii) = rfmax;
-            %parentModules(p).rf(:,ii) = rfmax * parentModules(p).rf(:,ii);
+            rf(:, w) = rfmax * modules(p).rf(:, w);
+            RFmax(p, w) = rfmax;
+            %modules(p).rf(:, w) = rfmax * modules(p).rf(:, w);
         end
     end
 
-    for ii = 1:parentModules(p).npulses
+    for w = 1:modules(p).npulses
         gxmax = 0;
         gymax = 0;
         gzmax = 0;
         for n = 1:length(loop)
-            if loop(n).mod == p & loop(n).wavnum == ii
+            if loop(n).mod == p & loop(n).wavnum == w
                 gxmax = max(abs(loop(n).gxamp), gxmax);
                 gymax = max(abs(loop(n).gyamp), gymax);
                 gzmax = max(abs(loop(n).gzamp), gzmax);
@@ -313,16 +292,16 @@ for p = 1:length(parentModules)
         end
         for ax = {'gx','gy','gz'}
             ax = cell2mat(ax);
-            eval(sprintf('wav = parentModules(p).%s;', ax));
+            eval(sprintf('wav = modules(p).%s;', ax));
             if ~isempty(wav)
-                eval(sprintf('%s(:,ii) = %smax * parentModules(p).%s(:,ii);', ax, ax, ax));
-                %eval(sprintf('parentModules(p).%s(:,ii) = %smax * parentModules(p).%s(:,ii);', ax, ax, ax));
+                eval(sprintf('%s(:,w) = %smax * modules(p).%s(:,w);', ax, ax, ax));
+                %eval(sprintf('modules(p).%s(:,w) = %smax * modules(p).%s(:,w);', ax, ax, ax));
             end
         end
-        GXmax(p,ii) = gxmax;
-        GYmax(p,ii) = gymax;
-        GZmax(p,ii) = gzmax;
-        %[p ii rfmax gxmax gymax gzmax]
+        GXmax(p, w) = gxmax;
+        GYmax(p, w) = gymax;
+        GZmax(p, w) = gzmax;
+        %[p w rfmax gxmax gymax gzmax]
     end
 
     %fprintf('module %d: rfmax: %.3f, gxmax:%.2f, gymax:%.2f, gzmax:%.2f\n', p, rfmax, gxmax, gymax, gzmax);
@@ -333,41 +312,25 @@ for p = 1:length(parentModules)
 
     % make sure waveforms start and end at zero, and are on a 4-sample boundary (toppe.writemod requires this)
     channels = {'rf','gx','gy','gz'};
-    zeropadWarning = false;
-    fourSampleBoundaryWarning = false;
     for ii=1:length(channels)
         eval(sprintf('wav = %s;', channels{ii}));
         if ~isempty(wav)
             [nt npulses] = size(wav);
             if any(wav(1,:) ~= 0)
                 wav = [zeros(1,npulses); wav];
-                zeropadWarning = true;
             end
             if any(wav(end,:) ~= 0)
                 wav = [wav; zeros(1,npulses)];
-                ZeropadWarning = true;
             end
             [nt npulses] = size(wav);
-            if mod(nt,4)
-                wav = [wav; zeros(4-mod(nt,4), npulses)];
-                fourSampleBoundaryWarning = true;
-            end
+            wav = toppe.makeGElength(wav);
         end
         eval(sprintf('%s = wav;', channels{ii}));
     end
 
-    if arg.verbose
-        if fourSampleBoundaryWarning
-            warning(sprintf('One or more waveforms padded with zero at beginning and/or end (module %d).', p));
-        end
-        if zeropadWarning
-            warning(sprintf('One or more waveforms extended to 16us (4 sample) boundary (module %d).', p));
-        end
-    end     
-
     try
         warning('off');    % don't show message about padding waveforms
-        toppe.writemod(systemGE, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', parentModules(p).ofname); 
+        toppe.writemod(systemGE, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', modules(p).ofname); 
         warning('on');
     catch ME
         error(sprintf('Error in writemod:\n%s', ME.message));
@@ -378,7 +341,7 @@ for p = 1:length(parentModules)
     end
 
     % update entry in modules.txt
-    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', parentModules(p).ofname, 0, hasrf, hasadc);    
+    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', modules(p).ofname, 0, hasRF, hasADC);    
 end
 fclose(fid);
 
@@ -422,7 +385,7 @@ for n = 1:length(loop)
     w = loop(n).wavnum;
 
     % RF scaling
-    if parentModules(p).hasRF
+    if modules(p).hasRF
         RFamplitude = loop(n).rfamp/RFmax(p,w);
     end
 
@@ -457,7 +420,7 @@ for n = 1:length(loop)
         textraWarning = false;
     end
 
-    toppe.write2loop(parentModules(p).ofname, systemGE, ...
+    toppe.write2loop(modules(p).ofname, systemGE, ...
         'RFamplitude', RFamplitude, ...
         'Gamplitude',  Gamplitude, ...
         'slice',       slice, ...
@@ -481,6 +444,8 @@ end
 
 toppe.write2loop('finish', systemGE);
 
+return
+
 if arg.toppeVersion > 5
     % Write cores.txt, which defines the block groups
     blockGroups = [];
@@ -500,12 +465,12 @@ end
 
 % Write TOPPE .entry file.
 % This can be edited by hand as needed after copying to scanner.
-for p = 1:length(parentModules)
-    if parentModules(p).hasRF
-        b1ScalingFile = parentModules(p).ofname;
+for p = 1:length(modules)
+    if modules(p).hasRF
+        b1ScalingFile = modules(p).ofname;
     end
-    if parentModules(p).hasADC
-        readoutFile = parentModules(p).ofname;
+    if modules(p).hasADC
+        readoutFile = modules(p).ofname;
     end
 end
 toppe.writeentryfile('toppeN.entry', ...
@@ -522,8 +487,8 @@ system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt', a
 if arg.toppeVersion > 5
     system(sprintf('tar rf %s %s', arg.tarFile, 'cores.txt'));
 end
-for p = 1:length(parentModules)
-    system(sprintf('tar rf %s %s', arg.tarFile, parentModules(p).ofname));
+for p = 1:length(modules)
+    system(sprintf('tar rf %s %s', arg.tarFile, modules(p).ofname));
 end
 
 % clean up
@@ -531,8 +496,8 @@ system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt');
 if arg.toppeVersion > 5
     system('rm cores.txt');
 end
-for p = 1:length(parentModules)
-    system(sprintf('rm %s', parentModules(p).ofname));
+for p = 1:length(modules)
+    system(sprintf('rm %s', modules(p).ofname));
 end
 
 if arg.verbose

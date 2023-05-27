@@ -38,7 +38,7 @@ arg.debug = false;
 arg.pulseqVersion = 'v1.4.0';
 arg.tarFile = 'toppeScanFiles.tar';
 arg.blockStop = [];
-arg.ibstart = 1;    % skip the first (ibstart-1) events (for testing)
+arg.nstart = 1;    % skip the first (nstart-1) events (for testing)
 arg.nt      = [];
 
 % Substitute specified system values as appropriate (from MIRT toolbox)
@@ -74,8 +74,8 @@ end
 % 'parentModules' struct array
 % Find blocks that are unique in terms of waveforms and timing 
 % (i.e., waveform amplitudes, RF/ADC phase, etc can differ),
-% and fill 'parentModules' struct array accordingly. 
-% Each entry of 'parentModules' is a struct containing all waveforms 
+% and fill 'parentModules' array accordingly. 
+% Each element of 'parentModules' is a struct containing all waveforms 
 % belonging to one module (.mod file), and other module info.
 % The usage of the word "module" here is consistent with its usage in TOPPE.
 % For now, the 'EXT' event ID (last column in event table) marks the beginning
@@ -104,11 +104,11 @@ else
 end
 
 % First entry in 'parentModules' struct array
-block = seq.getBlock(arg.ibstart);
-parentModules(1) = pulsegeq.sub_block2module(block, arg.ibstart, systemGE, 1);
+block = seq.getBlock(arg.nstart);
+parentModules(1) = pulsegeq.sub_block2module(block, arg.nstart, systemGE, 1);
 
 % First entry in 'loopStructArr' struct array (first block is by definition a module)
-nextblock = seq.getBlock(arg.ibstart+1);   % needed to set 'textra' in scanloop.txt
+nextblock = seq.getBlock(arg.nstart+1);   % needed to set 'textra' in scanloop.txt
 loopStructArr(1) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, 'mod', 1);
 
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
@@ -117,19 +117,19 @@ view = 1;
 echo = 0; 
 adcCount = 0;
 
-for ib = (arg.ibstart+1):nt
-    if ~mod(ib, 500) | ib == nt
+for n = (arg.nstart+1):nt
+    if ~mod(n, 500) | n == nt
         for inb = 1:20
             fprintf('\b');
         end
-        fprintf('Block %d/%d', ib, size(blockEvents, 1));
+        fprintf('Block %d/%d', n, size(blockEvents, 1));
     end
 
-    block = seq.getBlock(ib);
+    block = seq.getBlock(n);
 
     % get the next block, used to set textra column in scanloop.txt
-    if ib < size(blockEvents,1)
-        nextblock = seq.getBlock(ib+1);  
+    if n < size(blockEvents,1)
+        nextblock = seq.getBlock(n+1);  
     else
         nextblock = [];
     end
@@ -157,13 +157,13 @@ for ib = (arg.ibstart+1):nt
         if echo > systemGE.maxEcho
             error(sprintf('max number of echoes ecxeeded (%d)', systemGE.maxEcho));
         end
-        %fprintf('ib: %d, view: %d, sl: %d, echo: %d\n', ib, view, sl, echo);
+        %fprintf('n: %d, view: %d, sl: %d, echo: %d\n', n, view, sl, echo);
 
         adcCount = adcCount+1;
     end
 
     % create a TOPPE module struct from current Pulseq block
-    modCandidate = pulsegeq.sub_block2module(block, ib, systemGE, length(parentModules) + 1);
+    modCandidate = pulsegeq.sub_block2module(block, n, systemGE, length(parentModules) + 1);
 
     % Is there an existing module that can be reused (scaled)?
     % Specifically, does one of the existing modules (elements of parentModules) have 
@@ -187,10 +187,10 @@ for ib = (arg.ibstart+1):nt
     if isUnique
         % We found a unique block, so add it as a new module
         if arg.verbose
-            fprintf('\tFound new module at block %d\n', ib);
+            fprintf('\tFound new module at block %d\n', n);
         end
         parentModules(end+1) = modCandidate;
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
+        loopStructArr(n) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(parentModules));
         continue; % done, so move on to next block
     end
@@ -224,12 +224,12 @@ for ib = (arg.ibstart+1):nt
         % We found a set of RF/gradient waveforms in modularArr(ic) with the same shapes as those in modCandidate,
         % so we'll reuse that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
         iWavReuse = I(1);
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
+        loopStructArr(n) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', iWavReuse);
     else
         % Found a new set of shapes, so add this waveform set to parentModules(ic)
-        parentModules(ic) = pulsegeq.sub_updatemodule(parentModules(ic), block, ib, systemGE);
-        loopStructArr(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ... 
+        parentModules(ic) = pulsegeq.sub_updatemodule(parentModules(ic), block, n, systemGE);
+        loopStructArr(n) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ... 
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', parentModules(ic).npulses);
     end
 
@@ -290,9 +290,9 @@ for ic = 1:length(parentModules)
     if hasrf
         for ii = 1:parentModules(ic).npulses
             rfmax= 0;
-            for ib = 1:length(loopStructArr)
-                if loopStructArr(ib).mod == ic & loopStructArr(ib).wavnum == ii
-                    rfmax = max(loopStructArr(ib).rfamp, rfmax);
+            for n = 1:length(loopStructArr)
+                if loopStructArr(n).mod == ic & loopStructArr(n).wavnum == ii
+                    rfmax = max(loopStructArr(n).rfamp, rfmax);
                 end
             end
             rf(:,ii) = rfmax * parentModules(ic).rf(:,ii);
@@ -305,11 +305,11 @@ for ic = 1:length(parentModules)
         gxmax = 0;
         gymax = 0;
         gzmax = 0;
-        for ib = 1:length(loopStructArr)
-            if loopStructArr(ib).mod == ic & loopStructArr(ib).wavnum == ii
-                gxmax = max(abs(loopStructArr(ib).gxamp), gxmax);
-                gymax = max(abs(loopStructArr(ib).gyamp), gymax);
-                gzmax = max(abs(loopStructArr(ib).gzamp), gzmax);
+        for n = 1:length(loopStructArr)
+            if loopStructArr(n).mod == ic & loopStructArr(n).wavnum == ii
+                gxmax = max(abs(loopStructArr(n).gxamp), gxmax);
+                gymax = max(abs(loopStructArr(n).gyamp), gymax);
+                gzmax = max(abs(loopStructArr(n).gzamp), gzmax);
             end
         end
         for ax = {'gx','gy','gz'}
@@ -396,9 +396,9 @@ mods = toppe.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
 toppe.write2loop('setup', systemGE, 'version', arg.toppeVersion); 
 
-for ib = 1:length(loopStructArr)
+for n = 1:length(loopStructArr)
 
-    if isempty(loopStructArr(ib).mod)
+    if isempty(loopStructArr(n).mod)
         % skip delay blocks
         continue;
     end
@@ -418,36 +418,36 @@ for ib = 1:length(loopStructArr)
     dabmode         = 'on';
     rot             = 0;     % in-plane gradient rotation angle (radians)
 
-    iMod = loopStructArr(ib).mod;
-    iWav = loopStructArr(ib).wavnum;
+    iMod = loopStructArr(n).mod;
+    iWav = loopStructArr(n).wavnum;
 
     % RF scaling
     if parentModules(iMod).hasRF
-        RFamplitude = loopStructArr(ib).rfamp/RFmax(iMod,iWav);
+        RFamplitude = loopStructArr(n).rfamp/RFmax(iMod,iWav);
     end
 
     % gradient scaling
     if GXmax(iMod,iWav) > 0
-        Gamplitude(1) = loopStructArr(ib).gxamp/GXmax(iMod,iWav);
+        Gamplitude(1) = loopStructArr(n).gxamp/GXmax(iMod,iWav);
     end
     if GYmax(iMod,iWav) > 0
-        Gamplitude(2) = loopStructArr(ib).gyamp/GYmax(iMod,iWav);
+        Gamplitude(2) = loopStructArr(n).gyamp/GYmax(iMod,iWav);
     end
     if GZmax(iMod,iWav) > 0
-        Gamplitude(3) = loopStructArr(ib).gzamp/GZmax(iMod,iWav);
+        Gamplitude(3) = loopStructArr(n).gzamp/GZmax(iMod,iWav);
     end
 
-    RFphase  = loopStructArr(ib).rfphs;
-    DAQphase = loopStructArr(ib).recphs;
+    RFphase  = loopStructArr(n).rfphs;
+    DAQphase = loopStructArr(n).recphs;
     RFspoil  = false;
-    RFoffset = loopStructArr(ib).rffreq;    % Hz
-    slice    = loopStructArr(ib).slice;
-    echo     = loopStructArr(ib).echo + 1;  % write2loop starts indexing at 1
-    view     = loopStructArr(ib).view;
-    view     = loopStructArr(ib).view;
+    RFoffset = loopStructArr(n).rffreq;    % Hz
+    slice    = loopStructArr(n).slice;
+    echo     = loopStructArr(n).echo + 1;  % write2loop starts indexing at 1
+    view     = loopStructArr(n).view;
+    view     = loopStructArr(n).view;
     Dabmodes = {'off','on'};
-    dabmode  = Dabmodes{loopStructArr(ib).dabmode+1};
-    textra   = loopStructArr(ib).textra*1e3;    % msec
+    dabmode  = Dabmodes{loopStructArr(n).dabmode+1};
+    textra   = loopStructArr(n).textra*1e3;    % msec
 
     if textra < 0
         textraWarning = true;

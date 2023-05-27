@@ -64,8 +64,7 @@ if ~isempty(block)
 
     % if next block is a delay block, add duration to textra
     if ~isempty(nextblock) 
-        if isempty(nextblock.rf) & isempty(nextblock.adc) & ...
-            isempty(nextblock.gx) & isempty(nextblock.gy) & isempty(nextblock.gz)
+        if isdelayblock(nextblock)
             arg.textra = arg.textra + nextblock.blockDuration; 
         end
     end

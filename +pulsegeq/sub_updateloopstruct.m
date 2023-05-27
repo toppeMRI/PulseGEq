@@ -1,5 +1,5 @@
 %% Update/initialize loop struct
-function arg = sub_updateloopstruct(arg, block, nextblock, system, varargin)
+function arg = sub_updateloopstruct(arg, block, nextBlock, system, varargin)
 %
 % Fill struct containing entries for one row in scanloop.txt 
 %
@@ -65,9 +65,9 @@ if ~isempty(block)
     end
 
     % if next block is a delay block, add duration to textra
-    if ~isempty(nextblock) 
-        if isdelayblock(nextblock)
-            arg.textra = arg.textra + nextblock.blockDuration; 
+    if ~isempty(nextBlock) 
+        if isdelayblock(nextBlock)
+            arg.textra = arg.textra + nextBlock.blockDuration; 
         end
     end
 

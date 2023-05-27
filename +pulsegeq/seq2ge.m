@@ -341,7 +341,8 @@ for p = 1:length(modules)
     end
 
     % update entry in modules.txt
-    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', modules(p).ofname, 0, hasRF, hasADC);    
+
+    fprintf(fid,'%s\t%d\t%d\t%d\t%d\n', modules(p).ofname, 0, hasRF, hasADC, modules(p).trigpos);    
 end
 fclose(fid);
 

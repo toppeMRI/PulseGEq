@@ -19,15 +19,13 @@ else
     module.blockids(end+1) = blockid;
 end
 
-%
 if ~isempty(block.adc) & ~isempty(block.rf)
-    error('Block/module can not be both RF transmit and receive');
+    error('Block can not be both RF transmit and receive');
 end
 
 % RF
 if ~isempty(block.rf)
     module.hasRF = 1;
-    %module.ofname = 'tipdown.mod';
 
     % interpolate to GE raster time (4us)
     %rf = downsample(block.rf.signal, round(dt/1e-6));     % downsample from 1us to 4us (GE raster time)
@@ -39,7 +37,7 @@ if ~isempty(block.rf)
     %   warning('rf waveform is < 24 points and will not be interpolated to GE raster time');
     %end
 
-    % add delay
+    % add delay (pad with zeros)
     rf = [linspace(0, 0, round(block.rf.delay/dt))'; rf.'];
 
     % Normalize shapes and add to waveform group
@@ -138,7 +136,7 @@ end
 module.res = res;
 module.npulses = npulses;
 
-% set npre (RF/ADC delay, in number of 4us samples),
+% Set npre (RF/ADC delay, in number of 4us samples),
 % and rfres (duration of RF/ADC, in number of 4us samples)
 if module.hasADC
     module.npre = round(block.adc.delay/dt);
@@ -149,6 +147,13 @@ elseif module.hasRF
 else
     module.npre = 0;
     module.rfres = module.res;
+end
+
+% trigger out
+if isfield(block, 'trig')
+    module.trigpos = round(block.trig.delay*1e6);   % us
+else
+    module.trigpos = -1;    % no trigger
 end
 
 return

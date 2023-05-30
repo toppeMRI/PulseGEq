@@ -445,8 +445,6 @@ end
 
 toppe.write2loop('finish', systemGE);
 
-return
-
 if arg.toppeVersion > 5
     % Write cores.txt, which defines the block groups
     blockGroups = [];
@@ -492,17 +490,19 @@ for p = 1:length(modules)
     system(sprintf('tar rf %s %s', arg.tarFile, modules(p).ofname));
 end
 
-% clean up
-system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt');
-if arg.toppeVersion > 5
-    system('rm cores.txt');
-end
-for p = 1:length(modules)
-    system(sprintf('rm %s', modules(p).ofname));
-end
+% clean up (unless in verbose mode)
+if ~arg.verbose
+    system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt');
+    if arg.toppeVersion > 5
+        system('rm cores.txt');
+    end
+    for p = 1:length(modules)
+        system(sprintf('rm %s', modules(p).ofname));
+    end
 
-if arg.verbose
-    fprintf(' done\n');
+    if arg.verbose
+        fprintf(' done\n');
+    end
 end
 
 return;

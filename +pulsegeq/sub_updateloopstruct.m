@@ -1,5 +1,5 @@
-%% Update/initialize loopStructArr 
-function arg = sub_updateloopstruct(arg, block, nextblock, system, varargin)
+%% Update/initialize loop struct
+function arg = sub_updateloopstruct(arg, block, nextBlock, system, varargin)
 %
 % Fill struct containing entries for one row in scanloop.txt 
 %
@@ -13,7 +13,7 @@ function arg = sub_updateloopstruct(arg, block, nextblock, system, varargin)
 
 import pulsegeq.*
 
-% Initialize loopStruct struct
+% Initialize loop struct
 if isempty(arg)
     % Defaults
     arg.mod   = 1;           % module number. Positive integer (starts at 1).
@@ -32,6 +32,8 @@ if isempty(arg)
     arg.rffreq = 0;          % RF transmit frequency offset (Hz)
     arg.wavnum = 1;          % waveform number (rf/grad waveform array column index). Non-zero positive integer.
     arg.rotmat = eye(3);     % 3x3 rotation matrix (added to toppev3)
+    arg.trig = 0;            % cardiac trigger? (0 or 1)
+    arg.trigout = 0;         % play TTL trigger out as specified in modules.txt? (0 or 1)
     arg.blockGroupID = [];
 end
 
@@ -54,7 +56,7 @@ if ~isempty(block)
     timetrwait = system.timetrwait;  % us. Minimum delay before ssi time.
     timessi = system.timessi;
     tmp = pulsegeq.sub_block2module(block, 1, system, 1);
-    wavdur = tmp.nt*system.raster;  % waveform duration (s)
+    wavdur = tmp.res*system.raster;  % waveform duration (s)
     arg.textra = max(0, block.blockDuration - wavdur - (start_core + delpre + timetrwait + timessi)*1e-6);   % s
 
     % Set block group id
@@ -63,18 +65,22 @@ if ~isempty(block)
     end
 
     % if next block is a delay block, add duration to textra
-    if ~isempty(nextblock) 
-        if isempty(nextblock.rf) & isempty(nextblock.adc) & ...
-            isempty(nextblock.gx) & isempty(nextblock.gy) & isempty(nextblock.gz)
-            arg.textra = arg.textra + nextblock.blockDuration; 
+    if ~isempty(nextBlock) 
+        if isdelayblock(nextBlock)
+            arg.textra = arg.textra + nextBlock.blockDuration; 
         end
+    end
+
+    % add trigger
+    if isfield(block, 'trig')
+        arg.trigout = 1;
     end
 
     % rf amplitude, phase, freq
     if ~isempty(block.rf)
         arg.rfamp = max(abs(block.rf.signal)/system.gamma);    % Gauss
         arg.rfphs = block.rf.phaseOffset;                      % radians
-        arg.rffreq = round(block.rf.freqOffset);                      % Hz
+        arg.rffreq = round(block.rf.freqOffset);               % Hz
     end
 
     % receive phase

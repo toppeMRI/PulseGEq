@@ -9,16 +9,18 @@ function module = sub_block2module(block, blockid, system, modnum)
 %   system           hardware specs, as described in ../seq2ge.m
 %   modnum           Module number. Determines .mod file name.
 % Output:
-%   module        Struct containing module info (rf/gradient waveforms, blockEvents, etc)
-%                   .duration        'duration' entry in modules.txt
+%   module        Struct containing module info (rf/gradient waveforms, blockEvents, etc).
+%                 See also module.h in the TOPPE interpreter code.
 %                   .hasRF           'hasRF' entry in modules.txt
 %                   .hasADC          'hasADC' entry in modules.txt
 %                   .rf              [nt npulses] Normalized RF waveforms 
 %                   .gx              [nt npulses] Normalized Gx waveforms (same for .gy, .gz)
 %                   .gy 
 %                   .gz 
+%                   .res             number of 4us samples in waveforms
+%                   .npre            number of 4us samples before start of RF/ADC
+%                   .rfres           number of 4us samples in RF waveform or ADC window
 %                   .ofname          .mod output file name
-%                   .nt              max number of samples in waveforms 
 %                   .npulses         number of different sets of waveforms (e.g., size(gx.waveforms,2))
 
 import pulsegeq.*
@@ -29,7 +31,6 @@ import pulsegeq.*
 
 % Initialize with defaults
 module          = struct();
-module.duration = 0;
 module.hasRF    = 0;
 module.hasADC   = 0;
 module.ofname   = sprintf('module%d.mod', modnum);
@@ -41,7 +42,7 @@ for ax = {'rf', 'gx','gy','gz'}
 	module.(ax{1}) = [];
 end
 
-module.nt = 0;
+module.res = 0;
 module.npulses = 0;
 
 % Update 'module' with waveform information from 'block'.

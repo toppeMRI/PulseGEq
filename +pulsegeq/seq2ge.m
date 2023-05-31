@@ -357,7 +357,7 @@ fclose(fid);
 
 if arg.verbose
     fprintf('done. Created %d .mod files.\n', p);
-    toppe.plotmod('all');
+    toppe.plotmod('all', 'gradient', systemGE.gradient);
 end
 
 

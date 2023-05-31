@@ -244,6 +244,15 @@ if arg.verbose
     fprintf(1, 'Writing .mod files and modules.txt...\n');
 end
 
+% set maxRF in system struct to (just over) peak RF in sequence
+maxRF = 0; 
+for n = 1:length(loop)
+    if ~isempty(loop(n).rfamp)
+        maxRF = max(maxRF, loop(n).rfamp);
+    end
+end
+systemGE.maxRF = 1.005*maxRF;
+
 % write modules.txt header
 fid = fopen('modules.txt','w');
 fprintf(fid,'Total number of unique cores\n');

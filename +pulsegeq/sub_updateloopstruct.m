@@ -60,6 +60,8 @@ if ~isempty(block)
     % Set block group id
     if isfield(block, 'label')
         arg.blockGroupID = block.label.value;
+    else
+        arg.blockGroupID = 0;
     end
 
     % if next block is a delay block, add duration to textra

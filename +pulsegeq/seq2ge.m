@@ -448,6 +448,7 @@ for ib = 1:length(loopStructArr)
     Dabmodes = {'off','on'};
     dabmode  = Dabmodes{loopStructArr(ib).dabmode+1};
     textra   = loopStructArr(ib).textra*1e3;    % msec
+    core     = loopStructArr(ib).blockGroupID;
 
     if textra < 0
         textraWarning = true;
@@ -486,7 +487,7 @@ if arg.toppeVersion > 5
     for ie=1:length(loopStructArr)
         bgID = loopStructArr(ie).blockGroupID;
         modID = loopStructArr(ie).mod;
-        if ~isempty(bgID)
+        if bgID > 0
             % start of group (will simply overwrite if already existing)
             blockGroups{bgID} = modID;
             bgIDcurrent = bgID;

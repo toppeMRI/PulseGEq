@@ -6,12 +6,13 @@ function module = sub_updatemodule(module, block, blockid, system)
 %
 % Inputs:
 %   module           see sub_block2module()
+%   block            Pulseq block
 %   blockid          Pulseq block is seq.getBlock(blockid)
 %   system           TOPPE system struct
 
 import pulsegeq.*
 
-dt  = system.raster;   % sec
+raster  = system.raster;   % sec
 
 if isempty(module.blockids)
     module.blockids(1) = blockid;
@@ -24,8 +25,8 @@ if ~isempty(block.adc) & ~isempty(block.rf)
     error('Block/module can not be both RF transmit and receive');
 end
 
-module.npre = 0;   % default
-module.rfres = 0;  % temporary value
+module.npre = 0;   % default. Number of 4us samples during delay at start of module
+module.rfres = 0;  % temporary value. Number of 4us samples in RF/ADC window. 
 
 % RF
 if ~isempty(block.rf)
@@ -33,16 +34,16 @@ if ~isempty(block.rf)
     %module.ofname = 'tipdown.mod';
 
     % interpolate to GE raster time (4us)
-    %rf = downsample(block.rf.signal, round(dt/1e-6));     % downsample from 1us to 4us (GE raster time)
+    %rf = downsample(block.rf.signal, round(raster/1e-6));     % downsample from 1us to 4us (GE raster time)
     tge = block.rf.t(1) : system.raster : block.rf.t(end);
     rf = interp1(block.rf.t, block.rf.signal, tge);     % downsample from 1us to 4us (GE raster time)
     %if ( length(block.rf.signal) > 24 )
     %else
-    %   rf = block.rf.signal;                               % assumed to be already decimated in terms of dt_ge
+    %   rf = block.rf.signal;                               % assumed to be already decimated in terms of raster_ge
     %   warning('rf waveform is < 24 points and will not be interpolated to GE raster time');
     %end
 
-    module.npre = 2*floor(block.rf.delay/dt/2);
+    module.npre = 2*floor(block.rf.delay/raster/2);
     module.rfres = length(rf) + mod(length(rf), 2);
 
     % pad with zeros during delay
@@ -71,8 +72,8 @@ for ax = {'gx','gy','gz'};
             end
 
             % interpolate to GE raster time
-            % TODO: shift by dt/2?
-            tge = 0:dt:(max(grad.tt)-0*dt);
+            % TODO: shift by raster/2?
+            tge = 0:raster:(max(grad.tt)-0*raster);
             wav = interp1(grad.tt, grad.waveform, tge);   % interpolate to GE raster time (4us)
             wav(isnan(wav)) = 0;                         % must be due to interp1
             if wav(1) > 0
@@ -88,7 +89,7 @@ for ax = {'gx','gy','gz'};
         end
 
         % check slew
-        peakSlew = max(max(diff(wav,1)/(dt*1e3),[],1));
+        peakSlew = max(max(diff(wav,1)/(raster*1e3),[],1));
         if peakSlew > system.maxSlew
             %[peakSlew system.maxSlew blockid module.modnum size(module.(ax),2)+1]
             error(sprintf('slew rate violation at blockid %d (%s) (%.1f%%)', blockid, ax, peakSlew/system.maxSlew*100));
@@ -105,19 +106,18 @@ end
 % ADC
 if ~isempty(block.adc)
     module.hasADC = 1;
-    %module.ofname = 'readout.mod';
-    module.npre = 2*floor(block.adc.delay/dt/2);
+    module.npre = 2*floor(block.adc.delay/raster/2);
     tend = block.adc.delay + block.adc.dwell*block.adc.numSamples;  % sec
-    module.rfres = round(tend/dt);  % number of 4us samples in ADC window
+    module.rfres = round(tend/raster);  % number of 4us samples in ADC window
 end
 
 % If ADC block without gradients, create 'dummy' waveform to keep writemod happy
 % (needs at least one non-zero waveform)
 if module.hasADC & length([module.rf(:); module.gx(:); module.gy(:); module.gz(:)]) == 0
-    module.gx = 0.01*ones(round((block.adc.delay + block.adc.dwell*block.adc.numSamples)/dt), 1);
+    module.gx = 0.01*ones(round((block.adc.delay + block.adc.dwell*block.adc.numSamples)/raster), 1);
 end
 
-% store waveform length (useful for comparing blocks)
+% total number of 4us samples in module
 module.res = max([ length(module.rf) length(module.gx) ...
            length(module.gy) length(module.gz) ...
            module.rfres]);

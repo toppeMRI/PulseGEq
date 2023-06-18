@@ -198,7 +198,7 @@ for ib = (arg.ibstart+1):nt
     % modCandidate is not unique and has the same waveform length as an existing module, 
     % so now check to see if all waveform shapes in modCandidate match those in moduleArr(ic).
 
-    tol = 1e-3;  % Shape is deemed equal if sum(abs(difference)) < tol
+    tol = 1e-3;  % Shape is deemed equal if norm(difference) < tol
     ii = 1;
     isSameShape = [];
     for ax = {'rf','gx','gy','gz'};
@@ -212,7 +212,7 @@ for ib = (arg.ibstart+1):nt
                     wav1 = abs(wav1);
                     wav2 = abs(wav2);
                 end
-                isSameShape(ii,iwav) = norm(wav1-wav2,1) < tol;
+                isSameShape(ii,iwav) = norm(wav1-wav2, 1) < tol;
             end
             ii = ii + 1;
         end
@@ -275,10 +275,10 @@ fprintf(fid,'wavfile_name    duration (us)     has_RF?     has_ADC?\n');
 % loop through moduleArr
 for ic = 1:length(moduleArr)
 
-    hasadc = moduleArr(ic).hasADC;
-    hasrf  = moduleArr(ic).hasRF;
+    hasADC = moduleArr(ic).hasADC;
+    hasRF  = moduleArr(ic).hasRF;
 
-    if hasrf & hasadc
+    if hasRF & hasADC
         error('Cannot transmit RF and acquire data in same block. Redesign the .seq file.');
     end
 
@@ -287,7 +287,7 @@ for ic = 1:length(moduleArr)
     gx = [];
     gy = [];
     gz = [];
-    if hasrf
+    if hasRF
         for ii = 1:moduleArr(ic).npulses
             rfmax= 0;
             for ib = 1:length(loopStructArr)
@@ -329,7 +329,7 @@ for ic = 1:length(moduleArr)
     %fprintf('module %d: rfmax: %.3f, gxmax:%.2f, gymax:%.2f, gzmax:%.2f\n', ic, rfmax, gxmax, gymax, gzmax);
 
     if arg.verbose
-        fprintf('Creating .mod file number %d...\n', ic);
+        fprintf('\tCreating .mod file number %d... ', ic);
     end
 
     % make sure waveforms start and end at zero, and are on a 4-sample boundary (toppe.writemod requires this)
@@ -342,16 +342,16 @@ for ic = 1:length(moduleArr)
             [nt npulses] = size(wav);
             if any(wav(1,:) ~= 0)
                 wav = [zeros(1,npulses); wav];
-                zeropadWarning = true;
+                zeropadWarning = false;
             end
             if any(wav(end,:) ~= 0)
                 wav = [wav; zeros(1,npulses)];
-                ZeropadWarning = true;
+                ZeropadWarning = false;
             end
             [nt npulses] = size(wav);
             if mod(nt,4)
                 wav = [wav; zeros(4-mod(nt,4), npulses)];
-                fourSampleBoundaryWarning = true;
+                fourSampleBoundaryWarning = false;
             end
         end
         eval(sprintf('%s = wav;', channels{ii}));
@@ -368,7 +368,13 @@ for ic = 1:length(moduleArr)
 
     try
         warning('off');    % don't show message about padding waveforms
-        toppe.writemod(systemGE, 'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, 'ofname', moduleArr(ic).ofname); 
+        nChop(1) = moduleArr(ic).npre;
+        nChop(2) = moduleArr(ic).res - moduleArr(ic).npre - moduleArr(ic).rfres;
+        nChop(1) = nChop(1) + mod(nChop(1), 2);  % make even
+        nChop(2) = nChop(2) - mod(nChop(2), 2);
+        toppe.writemod(systemGE, 'ofname', moduleArr(ic).ofname, ...
+            'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, ...
+            'nChop', nChop);
         warning('on');
     catch ME
         error(sprintf('Error in writemod:\n%s', ME.message));
@@ -379,13 +385,12 @@ for ic = 1:length(moduleArr)
     end
 
     % update entry in modules.txt
-    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', moduleArr(ic).ofname, 0, hasrf, hasadc);    
+    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', moduleArr(ic).ofname, 0, hasRF, hasADC);    
 end
 fclose(fid);
 
 if arg.verbose
-    fprintf('done. Created %d .mod files.\n', ic);
-    toppe.plotmod('all');
+    fprintf('done. Created %d .mod files. To view, type: \t toppe.plotmod(''all'')\n', ic);
 end
 
 

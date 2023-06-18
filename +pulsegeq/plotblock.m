@@ -59,6 +59,8 @@ if ~isempty(gx) | ~isempty(gy) | ~isempty(gz)
 end
 
 subplot(122);
+xlabel('ms');
+ylabel('Gauss');
 if ~isempty(rf)
 	axis([max(0,tbeg-0.5e-3) tend+0.5e-3 min(abs(rf))-0.05 max(abs(rf))+0.05]);
 end

@@ -171,7 +171,7 @@ for ib = (arg.ibstart+1):nt
     % and the same value of 'hasADC', as modCandidate?
     isUnique = 1; 
     for ic = 1:length(moduleArr)
-        if (moduleArr(ic).nt == modCandidate.nt ...
+        if (moduleArr(ic).res == modCandidate.res ...
             & isempty(moduleArr(ic).rf) == isempty(modCandidate.rf) ...
             & isempty(moduleArr(ic).gx) == isempty(modCandidate.gx) ...
             & isempty(moduleArr(ic).gy) == isempty(modCandidate.gy) ...
@@ -241,10 +241,10 @@ else
     fprintf('\n');
 end
 
+
 %%
 %% Write the TOPPE files
 %%
-
 
 %% First, write each module to a .mod file
 if arg.verbose
@@ -447,6 +447,7 @@ if arg.toppeVersion > 5
     for ie=1:length(loopStructArr)
         bgID = loopStructArr(ie).blockGroupID;
         modID = loopStructArr(ie).mod;
+        %[ie bgID modID]
         if bgID > 0
             % start of group (will simply overwrite if already existing)
             blockGroups{bgID} = modID;

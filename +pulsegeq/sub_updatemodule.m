@@ -35,12 +35,7 @@ if ~isempty(block.rf)
     % interpolate to GE raster time (4us)
     %rf = downsample(block.rf.signal, round(raster/1e-6));     % downsample from 1us to 4us (GE raster time)
     tge = block.rf.t(1) : system.raster : block.rf.t(end);
-    rf = interp1(block.rf.t, block.rf.signal, tge);     % downsample from 1us to 4us (GE raster time)
-    %if ( length(block.rf.signal) > 24 )
-    %else
-    %   rf = block.rf.signal;                               % assumed to be already decimated in terms of raster_ge
-    %   warning('rf waveform is < 24 points and will not be interpolated to GE raster time');
-    %end
+    rf = interp1(block.rf.t, block.rf.signal, tge, 'linear', 'extrap');     % downsample from 1us to 4us (GE raster time)
 
     module.npre = 2*floor(block.rf.delay/raster/2);
     module.rfres = length(rf) + mod(length(rf), 2);
@@ -48,9 +43,9 @@ if ~isempty(block.rf)
     % pad with zeros during delay
     rf = [linspace(0, 0, module.npre)'; rf.'];
 
-    % Normalize and add to waveforms (loopStructArr array will contain rf amplitude for each block)
+    % Normalize and add to waveforms
     rf = rf/max(abs(rf(:)));
-    module.rf = sub_addwav(module.rf, rf);         % Normalized to amplitude 1
+    module.rf = sub_addwav(module.rf, rf);
 end
 
 % Gradients
@@ -141,6 +136,8 @@ for ii=1:length(gradChannels)
         eval(sprintf('module.%s= wav;', gradChannels{ii}));
     end
 end
+
+%if blockid == 1; keyboard; end;
 
 module.npulses = npulses;
 

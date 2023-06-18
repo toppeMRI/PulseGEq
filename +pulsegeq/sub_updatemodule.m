@@ -102,7 +102,7 @@ if ~isempty(block.adc)
     module.hasADC = 1;
     module.npre = 2*floor(block.adc.delay/raster/2);
     tend = block.adc.delay + block.adc.dwell*block.adc.numSamples;  % sec
-    module.rfres = round(tend/raster);  % number of 4us samples in ADC window
+    module.rfres = block.adc.numSamples;  % number of 4us samples in ADC window
 end
 
 % If ADC block without gradients, create 'dummy' waveform to keep writemod happy

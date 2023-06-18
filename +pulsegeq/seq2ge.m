@@ -241,24 +241,9 @@ else
     fprintf('\n');
 end
 
-
-%% Optional: As an intermediate check, we can now display the sequence in still/movie mode
-%% Example:
-if false
-    % still frame
-    nstart = 1; nstop = 20;
-    [rf,gx,gy,gz] = pulsegeq.sub_plotseq(moduleArr,loopStructArr,nstart,nstop);
-
-    % movie
-    nBlocksPerTR = 5;
-    pulsegeq.sub_playseq(moduleArr, loopStructArr, nBlocksPerTR, nTRskip, tpause);
-   pulsegeq.sub_playseq(modArr, loopArr, nBlocksPerTR);
-   pulsegeq.sub_playseq(modArr, loopArr, 5, 'gradMode', 'slew', 'tpause', 0.5);
-end
-
-
-%% Hopefully the sequence looks correct (pulsegeq.sub_playseq()), so now we need to write the
-%% TOPPE files.
+%%
+%% Write the TOPPE files
+%%
 
 
 %% First, write each module to a .mod file
@@ -332,35 +317,12 @@ for ic = 1:length(moduleArr)
         fprintf('\tCreating .mod file number %d... ', ic);
     end
 
-    % make sure waveforms start and end at zero, and are on a 2-sample boundary (toppe.writemod requires this)
-    %{
-    channels = {'rf','gx','gy','gz'};
-    zeropadWarning = false;
-    fourSampleBoundaryWarning = false;
-    for ii=1:length(channels)
-        eval(sprintf('wav = %s;', channels{ii}));
-        if ~isempty(wav)
-            [nt npulses] = size(wav);
-            if any(wav(1,:) ~= 0)
-                wav = [zeros(1,npulses); wav];
-                zeropadWarning = false;
-            end
-            if any(wav(end,:) ~= 0)
-                wav = [wav; zeros(1,npulses)];
-                ZeropadWarning = false;
-            end
-            wav = toppe.makeGElength(wav);
-        end
-        eval(sprintf('%s = wav;', channels{ii}));
-    end
-    %}
-
     try
         warning('off');    % don't show message about padding waveforms
         nChop(1) = moduleArr(ic).npre;
         nChop(2) = moduleArr(ic).res - moduleArr(ic).npre - moduleArr(ic).rfres;
-        nChop(1) = nChop(1) + mod(nChop(1), 2);  % make even
-        nChop(2) = nChop(2) - mod(nChop(2), 2);
+        %nChop(1) = nChop(1) + mod(nChop(1), 2);  % make even
+        %nChop(2) = nChop(2) - mod(nChop(2), 2);
         toppe.writemod(systemGE, 'ofname', moduleArr(ic).ofname, ...
             'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, ...
             'nChop', nChop);
@@ -375,6 +337,7 @@ for ic = 1:length(moduleArr)
 
     % update entry in modules.txt
     fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', moduleArr(ic).ofname, 0, hasRF, hasADC);    
+
 end
 fclose(fid);
 
@@ -388,8 +351,10 @@ end
 % load .mod files
 mods = toppe.tryread(@toppe.readmodulelistfile, 'modules.txt');
 
+% initialize scanloop.txt file
 toppe.write2loop('setup', systemGE, 'version', arg.toppeVersion); 
 
+% write to scanloop.txt, one row at a time
 for ib = 1:length(loopStructArr)
 
     if isempty(loopStructArr(ib).mod)
@@ -473,6 +438,7 @@ if textraWarning
         ' ''textra'' set to zero in one or more scanloop.txt entries.\n']);
 end
 
+% close file
 toppe.write2loop('finish', systemGE);
 
 if arg.toppeVersion > 5

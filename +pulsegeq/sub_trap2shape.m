@@ -19,3 +19,4 @@ wav = [ linspace(0, 0, round(grad.delay/raster) - 1) linspace(0, gamp, round(gra
 		gamp*ones(1, round(grad.flatTime/raster) - 2) ... 
 		linspace(gamp, 0, round(grad.fallTime/raster) + 1) ]';
 
+% 1e6*[length(wav)*raster (grad.delay + grad.riseTime + grad.flatTime + grad.fallTime)]

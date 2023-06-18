@@ -24,6 +24,9 @@ if ~isempty(block.adc) & ~isempty(block.rf)
     error('Block/module can not be both RF transmit and receive');
 end
 
+module.npre = 0;   % default
+module.rfres = 0;  % temporary value
+
 % RF
 if ~isempty(block.rf)
     module.hasRF = 1;
@@ -39,8 +42,11 @@ if ~isempty(block.rf)
     %   warning('rf waveform is < 24 points and will not be interpolated to GE raster time');
     %end
 
-    % add delay
-    rf = [linspace(0, 0, round(block.rf.delay/dt))'; rf.'];
+    module.npre = 2*floor(block.rf.delay/dt/2);
+    module.rfres = length(rf) + mod(length(rf), 2);
+
+    % pad with zeros during delay
+    rf = [linspace(0, 0, module.npre)'; rf.'];
 
     % Normalize and add to waveforms (loopStructArr array will contain rf amplitude for each block)
     rf = rf/max(abs(rf(:)));
@@ -100,40 +106,43 @@ end
 if ~isempty(block.adc)
     module.hasADC = 1;
     %module.ofname = 'readout.mod';
+    module.npre = 2*floor(block.adc.delay/dt/2);
     tend = block.adc.delay + block.adc.dwell*block.adc.numSamples;  % sec
-    nAdc = round(tend/dt);
-else
-    nAdc = 0;
+    module.rfres = round(tend/dt);  % number of 4us samples in ADC window
 end
 
-% if ADC block without gradients, create 'dummy' waveform to keep writemod happy
+% If ADC block without gradients, create 'dummy' waveform to keep writemod happy
+% (needs at least one non-zero waveform)
 if module.hasADC & length([module.rf(:); module.gx(:); module.gy(:); module.gz(:)]) == 0
     module.gx = 0.01*ones(round((block.adc.delay + block.adc.dwell*block.adc.numSamples)/dt), 1);
 end
 
 % store waveform length (useful for comparing blocks)
-nt = max([ length(module.rf) length(module.gx) ...
+module.res = max([ length(module.rf) length(module.gx) ...
            length(module.gy) length(module.gz) ...
-           nAdc]);
+           module.rfres]);
+
+if module.rfres == 0
+    module.rfres = module.res;
+end
 
 % pad with zeros as needed to ensure equal length of all (non-empty) waveforms
 npulses = 0;
 if ~isempty(module.rf)
     wav = module.rf;
     npulses = size(wav,2);
-    module.rf = [wav; zeros(nt-size(wav,1), size(wav,2))];
+    module.rf = [wav; zeros(module.res-size(wav,1), size(wav,2))];
 end
 gradChannels = {'gx','gy','gz'};
 for ii=1:length(gradChannels)
     eval(sprintf('wav = module.%s;', gradChannels{ii}));
     if ~isempty(wav)
         npulses = size(wav,2);
-        wav = [wav; zeros(nt-size(wav,1), size(wav,2))];
+        wav = [wav; zeros(module.res-size(wav,1), size(wav,2))];
         eval(sprintf('module.%s= wav;', gradChannels{ii}));
     end
 end
 
-module.nt = nt;
 module.npulses = npulses;
 
 return

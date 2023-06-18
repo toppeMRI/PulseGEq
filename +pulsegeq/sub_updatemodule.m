@@ -31,7 +31,6 @@ module.rfres = 0;  % temporary value. Number of 4us samples in RF/ADC window.
 % RF
 if ~isempty(block.rf)
     module.hasRF = 1;
-    %module.ofname = 'tipdown.mod';
 
     % interpolate to GE raster time (4us)
     %rf = downsample(block.rf.signal, round(raster/1e-6));     % downsample from 1us to 4us (GE raster time)

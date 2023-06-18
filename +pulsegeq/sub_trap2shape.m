@@ -13,11 +13,9 @@ if nargin < 2
 end
 
 gamma = 4.2576e3;       % Hz/G
-
-dt = raster;
 gamp = abs(grad.amplitude)/100/gamma;                % Gauss/cm
-wav = [ linspace(0, 0, ceil(grad.delay/dt)) linspace(0, gamp, ceil(grad.riseTime/dt)+1)  ...
-		gamp*ones(1, floor(grad.flatTime/dt)) ... 
-		linspace(gamp, 0, ceil(grad.fallTime/dt)+1) ]';
 
-return
+wav = [ linspace(0, 0, floor(grad.delay/raster) - 1) linspace(0, gamp, ceil(grad.riseTime/raster))  ...
+		gamp*ones(1, floor(grad.flatTime/raster)) ... 
+		linspace(gamp, 0, ceil(grad.fallTime/raster)) ]';
+

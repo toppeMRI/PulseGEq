@@ -348,11 +348,7 @@ for ic = 1:length(moduleArr)
                 wav = [wav; zeros(1,npulses)];
                 ZeropadWarning = false;
             end
-            [nt npulses] = size(wav);
-            if mod(nt,4)
-                wav = [wav; zeros(4-mod(nt,4), npulses)];
-                fourSampleBoundaryWarning = false;
-            end
+            wav = toppe.makeGElength(wav);
         end
         eval(sprintf('%s = wav;', channels{ii}));
     end

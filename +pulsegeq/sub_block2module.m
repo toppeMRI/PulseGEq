@@ -29,7 +29,7 @@ import pulsegeq.*
 
 % Initialize with defaults
 module          = struct();
-module.duration = 0;
+module.duration = block.blockDuration*1e6;
 module.hasRF    = 0;
 module.hasADC   = 0;
 module.ofname   = sprintf('module%d.mod', modnum);
@@ -41,7 +41,6 @@ for ax = {'rf', 'gx','gy','gz'}
 	module.(ax{1}) = [];
 end
 
-module.nt = 0;
 module.npulses = 0;
 
 % Update 'module' with waveform information from 'block'.

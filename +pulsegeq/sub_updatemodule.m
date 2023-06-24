@@ -20,10 +20,11 @@ else
     module.blockids(end+1) = blockid;
 end
 
-%
 if ~isempty(block.adc) & ~isempty(block.rf)
     error('Block/module can not be both RF transmit and receive');
 end
+
+module.duration = max(module.duration, block.blockDuration*1e6);  % us
 
 module.npre = 0;   % default. Number of 4us samples during delay at start of module
 module.rfres = 0;  % temporary value. Number of 4us samples in RF/ADC window. 
@@ -37,11 +38,14 @@ if ~isempty(block.rf)
     tge = block.rf.t(1) : system.raster : block.rf.t(end);
     rf = interp1(block.rf.t, block.rf.signal, tge, 'linear', 'extrap');     % downsample from 1us to 4us (GE raster time)
 
-    module.npre = 2*floor(block.rf.delay/raster/2);
-    module.rfres = length(rf) + mod(length(rf), 2);
+    % make length even
+    %rf = toppe.makeGElength(rf(:));
+
+    module.rfres = length(rf);
 
     % pad with zeros during delay
-    rf = [linspace(0, 0, module.npre)'; rf.'];
+    module.npre = round(block.rf.delay/raster);
+    rf = [linspace(0, 0, module.npre)'; rf(:)];
 
     % Normalize and add to waveforms
     rf = rf/max(abs(rf(:)));
@@ -54,28 +58,11 @@ for ax = {'gx','gy','gz'};
     grad = block.(ax);
     if ~isempty(grad)
         if strcmp(grad.type, 'grad')    % arbitrary shape
-            % must start and end on zero
-            grad.raster = grad.tt(2) - grad.tt(1);
-            if abs(grad.waveform(1)) > 0
-                grad.waveform = [0; grad.waveform];
-                grad.tt = [grad.raster/2; (grad.tt + grad.raster)];
-            end
-            if abs(grad.waveform(end)) > 0
-                grad.waveform = [grad.waveform; 0];
-                grad.tt = [grad.tt; (grad.tt(end) + grad.raster)];
-            end
-
             % interpolate to GE raster time
             % TODO: shift by raster/2?
             tge = 0:raster:(max(grad.tt)-0*raster);
-            wav = interp1(grad.tt, grad.waveform, tge);   % interpolate to GE raster time (4us)
-            wav(isnan(wav)) = 0;                         % must be due to interp1
-            if wav(1) > 0
-                wav = [0; wav(:)];
-            end
-            if wav(end) > 0
-                wav = [wav(:); 0];
-            end
+            wav = interp1(grad.tt, grad.waveform, tge, 'linear', 'extrap');   % interpolate to GE raster time (4us)
+%            wav(isnan(wav)) = 0;                         % must be due to interp1
             wav = wav/100/system.gamma;                  % Gauss/cm
         else
             % trapezoid
@@ -136,8 +123,6 @@ for ii=1:length(gradChannels)
         eval(sprintf('module.%s= wav;', gradChannels{ii}));
     end
 end
-
-%if blockid == 1; keyboard; end;
 
 module.npulses = npulses;
 

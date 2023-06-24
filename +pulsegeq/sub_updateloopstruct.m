@@ -54,7 +54,7 @@ if ~isempty(block)
     timetrwait = system.timetrwait;  % us. Minimum delay before ssi time.
     timessi = system.timessi;
     tmp = pulsegeq.sub_block2module(block, 1, system, 1);
-    wavdur = tmp.nt*system.raster;  % waveform duration (s)
+    wavdur = tmp.res*system.raster;  % waveform duration (s)
     arg.textra = max(0, block.blockDuration - wavdur - (start_core + delpre + timetrwait + timessi)*1e-6);   % s
 
     % Set block group id

@@ -209,10 +209,12 @@ for ib = (arg.ibstart+1):nt
                 eval(sprintf('wav1 = modules(ic).%s(:,iwav);', ax));
                 eval(sprintf('wav2 = modCandidate.%s;', ax));
                 if strcmp(ax, 'rf')
-                    wav1 = abs(wav1);
-                    wav2 = abs(wav2);
+                    % subtract common phase before comparing
+                    ntmp = round(length(wav1)/2);
+                    wav1 = wav1.*exp(-1i*angle(wav1(ntmp)));
+                    wav2 = wav2.*exp(-1i*angle(wav2(ntmp)));
                 end
-                isSameShape(ii,iwav) = norm(wav1-wav2, 1) < tol | norm(wav1+wav2) < tol;
+                isSameShape(ii,iwav) = norm(wav1-wav2, 1) < tol; % | norm(wav1+wav2) < tol;
             end
             ii = ii + 1;
         end

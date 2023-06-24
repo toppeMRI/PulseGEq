@@ -91,9 +91,10 @@ if ~isempty(block)
         grad = block.(ax);
         if ~isempty(grad)
             if strcmp(grad.type,'trap')
-                % Gauss/cm, signed (in moduleArr, traps are normalized and positive)
+                % Gauss/cm, signed (in modules array, traps are normalized and positive)
                 eval( sprintf('arg.%samp = (block.%s.amplitude)/system.gamma/100;', ax, ax) );   
             else
+                % arbitrary waveform
                 eval( sprintf('wav = block.%s.waveform/system.gamma/100;', ax) );    % Gauss/cm
                 wmax = max(abs(wav));
                 eval( sprintf('arg.%samp = wmax;', ax) );

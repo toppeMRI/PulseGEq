@@ -24,8 +24,6 @@ if ~isempty(block.adc) & ~isempty(block.rf)
     error('Block/module can not be both RF transmit and receive');
 end
 
-module.duration = max(module.duration, block.blockDuration*1e6);  % us
-
 module.npre = 0;   % default. Number of 4us samples during delay at start of module
 module.rfres = 0;  % temporary value. Number of 4us samples in RF/ADC window. 
 

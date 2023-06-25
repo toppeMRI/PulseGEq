@@ -1,5 +1,5 @@
 %% Update/initialize loopStructArr 
-function arg = sub_updateloopstruct(arg, block, nextblock, system, varargin)
+function arg = sub_updateloopstruct(arg, block, system, varargin)
 %
 % Fill struct containing entries for one row in scanloop.txt 
 %
@@ -40,37 +40,11 @@ arg = toppe.utils.vararg_pair(arg, varargin);
 
 % If block is provided, fill in values as appropriate
 if ~isempty(block)
-    % Determine textra. See UserGuide/figs/timing.svg
-    if ~isempty(block.rf) 
-        start_core = system.start_core_rf;    % Earliest start of waveform (us).
-        delpre = system.psd_rf_wait;   % Gradient delay w.r.t. RF waveform (us)
-    elseif ~isempty(block.adc) 
-        start_core = system.start_core_daq;   % data acquisition module
-        delpre = system.psd_grd_wait; % Gradient delay w.r.t. ADC window (us)
-    else
-        start_core = system.start_core_grad;  % only gradients
-        delpre = 0;
-    end
-    timetrwait = system.timetrwait;  % us. Minimum delay before ssi time.
-    timessi = system.timessi;
-    tmp = pulsegeq.sub_block2module(block, 1, system, 1);
-    wavdur = tmp.res*system.raster;  % waveform duration (s)
-    arg.textra = max(0, block.blockDuration - wavdur - (start_core + delpre + timetrwait + timessi)*1e-6);   % s
-
     % Set block group id
     if isfield(block, 'label')
         arg.blockGroupID = block.label.value;
     else
         arg.blockGroupID = 0;
-    end
-
-    % if next block is a delay block, add duration to textra
-    if ~isempty(nextblock) 
-        if isdelayblock(nextblock)
-
-            arg.textra = arg.textra + nextblock.blockDuration; 
-
-        end
     end
 
     % rf amplitude, phase, freq

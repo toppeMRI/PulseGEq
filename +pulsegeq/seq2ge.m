@@ -105,11 +105,15 @@ end
 
 % First entry in 'modules' struct array
 block = seq.getBlock(arg.ibstart);
-modules(1) = pulsegeq.sub_block2module(block, arg.ibstart, systemGE, 1);
+if pulsegeq.isdelayblock(block)
+    error('First block cannot be a pure delay block');
+end
+nextblock = seq.getBlock(arg.ibstart+1);
+modules(1) = pulsegeq.sub_block2module(block, nextblock, arg.ibstart, systemGE, 1);
 
 % First entry in 'loopEntries' struct array (first block is by definition a module)
 nextblock = seq.getBlock(arg.ibstart+1);   % needed to set 'textra' in scanloop.txt
-loopEntries(1) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, 'mod', 1);
+loopEntries(1) = pulsegeq.sub_updateloopstruct([], block, systemGE, 'mod', 1);
 
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
 sl = 1;
@@ -127,22 +131,18 @@ for ib = (arg.ibstart+1):nt
 
     block = seq.getBlock(ib);
 
-    % get the next block, used to set textra column in scanloop.txt
+    if pulsegeq.isdelayblock(block);
+        continue; % nothing to do here
+    end
+
+    % get the next block (needed to set delay)
     if ib < size(blockEvents,1)
         nextblock = seq.getBlock(ib+1);  
     else
         nextblock = [];
     end
-%    if isfield(nextblock, 'trig') 
-%        nextblock = [];
-%    end
 
-    % Empty (pure delay) blocks are accounted for in 'textra' in the previous row in scanloop.txt
-    if isempty(block.rf) & isempty(block.adc) ...
-        & isempty(block.gx) & isempty(block.gy) & isempty(block.gz) % ...
-        %| isfield(block, 'trig')  % ignore trigger (ext) blocks for now. TODO
-        continue;  % Done, move on to next block 
-    end
+    % TODO: to handle trig events, see 'magnus' branch
 
     % set slice/echo/view indeces (if block is an acquisition block)
     % view = 1, ..., system.maxView
@@ -163,7 +163,7 @@ for ib = (arg.ibstart+1):nt
     end
 
     % create a TOPPE module struct from current Pulseq block
-    modCandidate = pulsegeq.sub_block2module(block, ib, systemGE, length(modules) + 1);
+    modCandidate = pulsegeq.sub_block2module(block, nextblock, ib, systemGE, length(modules) + 1);
 
     % Is there an existing module that can be reused (scaled)?
     % Specifically, does one of the existing modules (elements of modules) have 
@@ -172,6 +172,7 @@ for ib = (arg.ibstart+1):nt
     isUnique = 1; 
     for ic = 1:length(modules)
         if (modules(ic).res == modCandidate.res ...
+            & modules(ic).duration == modCandidate.duration ...
             & isempty(modules(ic).rf) == isempty(modCandidate.rf) ...
             & isempty(modules(ic).gx) == isempty(modCandidate.gx) ...
             & isempty(modules(ic).gy) == isempty(modCandidate.gy) ...
@@ -190,7 +191,7 @@ for ib = (arg.ibstart+1):nt
             fprintf('\tFound new module at block %d\n', ib);
         end
         modules(end+1) = modCandidate;
-        loopEntries(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
+        loopEntries(ib) = pulsegeq.sub_updateloopstruct([], block, systemGE, ...
             'dabmode', modCandidate.hasADC, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(modules));
         continue; % done, so move on to next block
     end
@@ -226,12 +227,12 @@ for ib = (arg.ibstart+1):nt
         % We found a set of RF/gradient waveforms in modularArr(ic) with the same shapes as those in modCandidate,
         % so we'll reuse that and set 'mod' and 'wavnum' (waveform array column index) accordingly.
         iWavReuse = I(1);
-        loopEntries(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
+        loopEntries(ib) = pulsegeq.sub_updateloopstruct([], block, systemGE, ...
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', iWavReuse);
     else
         % Found a new set of shapes, so add this waveform set to modules(ic)
         modules(ic) = pulsegeq.sub_updatemodule(modules(ic), block, ib, systemGE);
-        loopEntries(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ... 
+        loopEntries(ib) = pulsegeq.sub_updateloopstruct([], block, systemGE, ... 
             'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', ic, 'wavnum', modules(ic).npulses);
     end
 

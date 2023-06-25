@@ -1,10 +1,11 @@
-function module = sub_block2module(block, blockid, system, modnum)
+function module = sub_block2module(block, nextblock, blockid, system, modnum)
 %% Storage for groups of arbitrary gradients and rf signals
 %
 % Initialize a module with waveforms from 'block'
 %
 % Inputs:
 %   block            Pulseq block obtained with getBlock()
+%   nextblock        Pulseq block obtained with getBlock(). Needed in case it's a delay block.
 %   blockid          Pulseq block is seq.getBlock(blockid)
 %   system           hardware specs, as described in ../seq2ge.m
 %   modnum           Module number. Determines .mod file name.
@@ -35,6 +36,12 @@ import pulsegeq.*
 % Initialize with defaults
 module          = struct();
 module.duration = block.blockDuration*1e6;
+if ~isempty(nextblock)
+    if pulsegeq.isdelayblock(nextblock)
+        module.duration = module.duration + nextblock.blockDuration*1e6;
+    end
+end
+        
 module.hasRF    = 0;
 module.hasADC   = 0;
 module.fname   = sprintf('module%d.mod', modnum);

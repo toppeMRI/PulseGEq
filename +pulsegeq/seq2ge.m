@@ -326,7 +326,7 @@ for ic = 1:length(modules)
         nChop(2) = modules(ic).res - modules(ic).npre - modules(ic).rfres;
         %nChop(1) = nChop(1) + mod(nChop(1), 2);  % make even
         %nChop(2) = nChop(2) - mod(nChop(2), 2);
-        toppe.writemod(systemGE, 'ofname', modules(ic).ofname, ...
+        toppe.writemod(systemGE, 'ofname', modules(ic).fname, ...
             'rf', rf, 'gx', gx, 'gy', gy, 'gz', gz, ...
             'nChop', nChop);
         warning('on');
@@ -339,7 +339,7 @@ for ic = 1:length(modules)
     end
 
     % update entry in modules.txt
-    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', modules(ic).ofname, round(modules(ic).duration), hasRF, hasADC);    
+    fprintf(fid,'%s\t%d\t%d\t%d\t-1\n', modules(ic).fname, round(modules(ic).duration), hasRF, hasADC);    
 
 end
 fclose(fid);
@@ -419,7 +419,7 @@ for ib = 1:length(loopEntries)
     end
 
     %toppe.write2loop(sprintf('module%d.mod',iMod), ...
-    toppe.write2loop(modules(iMod).ofname, systemGE, ...
+    toppe.write2loop(modules(iMod).fname, systemGE, ...
         'Gamplitude',  Gamplitude, ...
         'waveform',    iWav, ...
         'RFamplitude', RFamplitude, ...
@@ -466,10 +466,10 @@ end
 % This can be edited by hand as needed after copying to scanner.
 for ic = 1:length(modules)
     if modules(ic).hasRF
-        b1ScalingFile = modules(ic).ofname;
+        b1ScalingFile = modules(ic).fname;
     end
     if modules(ic).hasADC
-        readoutFile = modules(ic).ofname;
+        readoutFile = modules(ic).fname;
     end
 end
 toppe.writeentryfile('toppeN.entry', ...
@@ -487,7 +487,7 @@ if arg.toppeVersion > 5
     system(sprintf('tar rf %s %s', arg.tarFile, 'cores.txt'));
 end
 for ic = 1:length(modules)
-    system(sprintf('tar rf %s %s', arg.tarFile, modules(ic).ofname));
+    system(sprintf('tar rf %s %s', arg.tarFile, modules(ic).fname));
 end
 
 if arg.verbose
@@ -506,7 +506,7 @@ end
 % clean up
 system('rm modules.txt scanloop.txt seqstamp.txt toppeN.entry');
 for ic = 1:length(modules)
-    system(sprintf('rm %s', modules(ic).ofname));
+    system(sprintf('rm %s', modules(ic).fname));
 end
 
 if ~arg.verbose

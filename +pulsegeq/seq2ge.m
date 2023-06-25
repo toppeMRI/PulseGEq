@@ -191,7 +191,7 @@ for ib = (arg.ibstart+1):nt
         end
         modules(end+1) = modCandidate;
         loopEntries(ib) = pulsegeq.sub_updateloopstruct([], block, nextblock, systemGE, ...
-            'dabmode', 1, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(modules));
+            'dabmode', modCandidate.hasADC, 'slice', sl, 'echo', echo, 'view', view, 'mod', length(modules));
         continue; % done, so move on to next block
     end
 

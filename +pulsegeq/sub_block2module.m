@@ -9,17 +9,22 @@ function module = sub_block2module(block, blockid, system, modnum)
 %   system           hardware specs, as described in ../seq2ge.m
 %   modnum           Module number. Determines .mod file name.
 % Output:
-%   module        Struct containing module info (rf/gradient waveforms, blockEvents, etc)
-%                   .duration        'duration' entry in modules.txt
-%                   .hasRF           'hasRF' entry in modules.txt
-%                   .hasADC          'hasADC' entry in modules.txt
-%                   .rf              [nt npulses] Normalized RF waveforms 
-%                   .gx              [nt npulses] Normalized Gx waveforms (same for .gy, .gz)
-%                   .gy 
-%                   .gz 
-%                   .ofname          .mod output file name
-%                   .nt              max number of samples in waveforms 
-%                   .npulses         number of different sets of waveforms (e.g., size(gx.waveforms,2))
+%   module      Struct containing module info (rf/gradient waveforms, blockEvents, etc)
+%               This corresponds to the TP_MODULE struct in the TOPPE interpreter
+%                 .duration        'duration' entry in modules.txt
+%                 .hasRF           'hasRF' entry in modules.txt
+%                 .hasADC          'hasADC' entry in modules.txt
+%                 .fname           .mod output file name
+%                 .blockids        
+%                 .modnum          .mod file id/index (order in modules.txt)
+%                 .rf              [nt npulses] Normalized RF waveforms 
+%                 .gx              [nt npulses] Normalized Gx waveforms (same for .gy, .gz)
+%                 .gy 
+%                 .gz 
+%                 .npulses         number of different sets of waveforms (e.g., size(gx.waveforms,2))
+%                 .npres  
+%                 .rfres  
+%                 .res  
 
 import pulsegeq.*
 
@@ -32,7 +37,7 @@ module          = struct();
 module.duration = block.blockDuration*1e6;
 module.hasRF    = 0;
 module.hasADC   = 0;
-module.ofname   = sprintf('module%d.mod', modnum);
+module.fname   = sprintf('module%d.mod', modnum);
 module.blockids = [];
 module.modnum   = modnum;
 	

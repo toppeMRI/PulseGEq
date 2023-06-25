@@ -490,9 +490,22 @@ for ic = 1:length(modules)
     system(sprintf('tar rf %s %s', arg.tarFile, modules(ic).fname));
 end
 
+% clean up (unless in verbose mode)
+if ~arg.verbose
+    system('rm toppeN.entry seqstamp.txt modules.txt scanloop.txt');
+    if arg.toppeVersion > 5
+        system('rm cores.txt');
+    end
+    for p = 1:length(modules)
+        system(sprintf('rm %s', modules(p).fname));
+    end
+end
+
 if arg.verbose
     fprintf(' done\n');
 end
+
+
 
 return;
 

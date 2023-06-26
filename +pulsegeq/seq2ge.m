@@ -121,6 +121,8 @@ view = 1;
 echo = 0; 
 adcCount = 0;
 
+seq.getBlock(nt)
+
 for ib = (arg.ibstart+1):nt
     if ~mod(ib, 500)
         for inb = 1:20
@@ -136,7 +138,7 @@ for ib = (arg.ibstart+1):nt
     end
 
     % get the next block (needed to set delay)
-    if ib < size(blockEvents,1)
+    if ib < nt
         nextblock = seq.getBlock(ib+1);  
     else
         nextblock = [];
@@ -244,7 +246,6 @@ else
     fprintf('\n');
 end
 
-keyboard
 
 %%
 %% Write the TOPPE files

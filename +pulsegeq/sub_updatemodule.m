@@ -24,8 +24,8 @@ if ~isempty(block.adc) & ~isempty(block.rf)
     error('Block/module can not be both RF transmit and receive');
 end
 
-module.npre = 0;   % default. Number of 4us samples during delay at start of module
-module.rfres = 0;  % temporary value. Number of 4us samples in RF/ADC window. 
+module.npre = 0;   % RF/ADC delay (number of 4us samples)
+module.rfres = 0;  % Duration of RF/ADC window (number of 4us samples)
 
 % RF
 if ~isempty(block.rf)
@@ -41,7 +41,7 @@ if ~isempty(block.rf)
 
     module.rfres = length(rf);
 
-    % pad with zeros during delay
+    % pad with zeros during delay (the .mod file format requires it; interpreter ignores these zeros)
     module.npre = round(block.rf.delay/raster);
     rf = [linspace(0, 0, module.npre)'; rf(:)];
 
@@ -56,12 +56,10 @@ for ax = {'gx','gy','gz'};
     grad = block.(ax);
     if ~isempty(grad)
         if strcmp(grad.type, 'grad')    % arbitrary shape
-            % interpolate to GE raster time
-            % TODO: shift by raster/2?
-            tge = 0:raster:(max(grad.tt)-0*raster);
-            wav = interp1(grad.tt, grad.waveform, tge, 'linear', 'extrap');   % interpolate to GE raster time (4us)
-%            wav(isnan(wav)) = 0;                         % must be due to interp1
-            wav = wav/100/system.gamma;                  % Gauss/cm
+            % interpolate to GE raster time (4us)
+            tge = raster/2:raster:grad.tt(end);
+            wav = interp1(grad.tt, grad.waveform, tge, 'linear', 'extrap'); 
+            wav = wav/100/system.gamma;     % Gauss/cm
         else
             % trapezoid
             wav = sub_trap2shape(grad, system.raster);     % Gauss/cm
@@ -85,10 +83,9 @@ end
 % ADC
 if ~isempty(block.adc)
     module.hasADC = 1;
-    module.npre = 2*floor(block.adc.delay/raster/2);
-    tend = block.adc.delay + block.adc.dwell*block.adc.numSamples;  % sec
+    module.npre = round(block.adc.delay/raster);
 
-    % rfres*4us = ADC duration
+    % ADC duration = rfres*4us
     adcDuration = block.adc.dwell*block.adc.numSamples;
     module.rfres = 2*ceil(adcDuration/system.raster/2);
 end

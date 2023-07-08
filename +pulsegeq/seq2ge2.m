@@ -102,20 +102,16 @@ else
     nt = arg.nt;
 end
 
-% First entry in 'modules' struct array is always delay.mod (even if never used)
-block = seq.getBlock(arg.ibstart);
-modules(1) = pulsegeq.sub_block2module(block, [], arg.ibstart, systemGE, 1);
-
-% First entry in 'loopEntries' struct array (first block is by definition a module)
-loopEntries(1) = pulsegeq.sub_updateloopstruct([], block, systemGE, 'mod', 1);
-
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
 sl = 1;
 view = 1;
 echo = 0; 
 adcCount = 0;
 
-seq.getBlock(nt)
+% First block is by definition a module
+block = seq.getBlock(arg.ibstart);
+modules(1) = pulsegeq.sub_block2module(block, [], arg.ibstart, systemGE, 1);
+loopEntries(1) = pulsegeq.sub_updateloopstruct([], block, systemGE, 'mod', 1);
 
 for ib = (arg.ibstart+1):nt
     if ~mod(ib, 500)
@@ -369,8 +365,11 @@ for ib = 1:length(loopEntries)
     iMod = loopEntries(ib).mod;
     iWav = loopEntries(ib).wavnum;
 
-    % RF scaling
-    if iMod > 0
+    if iMod == 0
+        % delay block
+        fn = 'delay';
+    else
+        % RF scaling
         if modules(iMod).hasRF
             RFamplitude = loopEntries(ib).rfamp/RFmax(iMod,iWav);
         end
@@ -385,6 +384,8 @@ for ib = 1:length(loopEntries)
         if GZmax(iMod,iWav) > 0
             Gamplitude(3) = loopEntries(ib).gzamp/GZmax(iMod,iWav);
         end
+
+        fn = modules(iMod).fname;
     end
 
     RFphase  = loopEntries(ib).rfphs;
@@ -399,11 +400,6 @@ for ib = 1:length(loopEntries)
     textra   = loopEntries(ib).textra*1e3;    % msec
     core     = loopEntries(ib).blockGroupID;
 
-    if pulsegeq.isdelayblock(block)
-        fn = 'delay.mod';
-    else
-        fn = modules(iMod).fname;
-    end
     toppe.write2loop(fn, systemGE, ...
         'Gamplitude',  Gamplitude, ...
         'waveform',    iWav, ...

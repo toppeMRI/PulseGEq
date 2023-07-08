@@ -47,6 +47,13 @@ if ~isempty(block)
         arg.blockGroupID = 0;
     end
 
+    % If pure delay block
+    if isdelayblock(block)
+        minWaitPulseDuration = 4e-6;   % s
+        arg.mod = 0;  % tells the interpreter to play wait pulse
+        arg.textra = block.blockDuration - minWaitPulseDuration;
+    end
+
     % rf amplitude, phase, freq
     if ~isempty(block.rf)
         arg.rfamp = max(abs(block.rf.signal)/system.gamma);    % Gauss

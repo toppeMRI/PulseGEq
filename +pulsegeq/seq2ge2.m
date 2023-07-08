@@ -102,16 +102,11 @@ else
     nt = arg.nt;
 end
 
-% First entry in 'modules' struct array
+% First entry in 'modules' struct array is always delay.mod (even if never used)
 block = seq.getBlock(arg.ibstart);
-if pulsegeq.isdelayblock(block)
-    error('First block cannot be a pure delay block');
-end
-nextblock = seq.getBlock(arg.ibstart+1);
-modules(1) = pulsegeq.sub_block2module(block, nextblock, arg.ibstart, systemGE, 1);
+modules(1) = pulsegeq.sub_block2module(block, [], arg.ibstart, systemGE, 1);
 
 % First entry in 'loopEntries' struct array (first block is by definition a module)
-nextblock = seq.getBlock(arg.ibstart+1);   % needed to set 'textra' in scanloop.txt
 loopEntries(1) = pulsegeq.sub_updateloopstruct([], block, systemGE, 'mod', 1);
 
 % data frames (in Pfile) are stored using indeces 'slice', 'echo', and 'view' 
@@ -133,14 +128,9 @@ for ib = (arg.ibstart+1):nt
     block = seq.getBlock(ib);
 
     if pulsegeq.isdelayblock(block);
-        continue; % nothing to do here
-    end
-
-    % get the next block (needed to set delay)
-    if ib < nt
-        nextblock = seq.getBlock(ib+1);  
-    else
-        nextblock = [];
+        loopEntries(ib) = pulsegeq.sub_updateloopstruct([], block, systemGE, ...
+            'mod', 0);  
+        continue; 
     end
 
     % TODO: to handle trig events, see 'magnus' branch
@@ -164,7 +154,7 @@ for ib = (arg.ibstart+1):nt
     end
 
     % create a TOPPE module struct from current Pulseq block
-    modCandidate = pulsegeq.sub_block2module(block, nextblock, ib, systemGE, length(modules) + 1);
+    modCandidate = pulsegeq.sub_block2module(block, [], ib, systemGE, length(modules) + 1);
 
     % Is there an existing module that can be reused (scaled)?
     % Specifically, does one of the existing modules (elements of modules) have 
@@ -361,11 +351,6 @@ toppe.write2loop('setup', systemGE, 'version', arg.toppeVersion);
 % write to scanloop.txt, one row at a time
 for ib = 1:length(loopEntries)
 
-    if isempty(loopEntries(ib).mod)
-        % skip delay blocks
-        continue;
-    end
-
     % defaults
     Gamplitude      = [1 1 1]';
     waveform        = 1;
@@ -385,19 +370,21 @@ for ib = 1:length(loopEntries)
     iWav = loopEntries(ib).wavnum;
 
     % RF scaling
-    if modules(iMod).hasRF
-        RFamplitude = loopEntries(ib).rfamp/RFmax(iMod,iWav);
-    end
+    if iMod > 0
+        if modules(iMod).hasRF
+            RFamplitude = loopEntries(ib).rfamp/RFmax(iMod,iWav);
+        end
 
-    % gradient scaling
-    if GXmax(iMod,iWav) > 0
-        Gamplitude(1) = loopEntries(ib).gxamp/GXmax(iMod,iWav);
-    end
-    if GYmax(iMod,iWav) > 0
-        Gamplitude(2) = loopEntries(ib).gyamp/GYmax(iMod,iWav);
-    end
-    if GZmax(iMod,iWav) > 0
-        Gamplitude(3) = loopEntries(ib).gzamp/GZmax(iMod,iWav);
+        % gradient scaling
+        if GXmax(iMod,iWav) > 0
+            Gamplitude(1) = loopEntries(ib).gxamp/GXmax(iMod,iWav);
+        end
+        if GYmax(iMod,iWav) > 0
+            Gamplitude(2) = loopEntries(ib).gyamp/GYmax(iMod,iWav);
+        end
+        if GZmax(iMod,iWav) > 0
+            Gamplitude(3) = loopEntries(ib).gzamp/GZmax(iMod,iWav);
+        end
     end
 
     RFphase  = loopEntries(ib).rfphs;
@@ -412,15 +399,12 @@ for ib = 1:length(loopEntries)
     textra   = loopEntries(ib).textra*1e3;    % msec
     core     = loopEntries(ib).blockGroupID;
 
-    if textra < 0
-        textraWarning = true;
-        textra = 0;
+    if pulsegeq.isdelayblock(block)
+        fn = 'delay.mod';
     else
-        textraWarning = false;
+        fn = modules(iMod).fname;
     end
-
-    %toppe.write2loop(sprintf('module%d.mod',iMod), ...
-    toppe.write2loop(modules(iMod).fname, systemGE, ...
+    toppe.write2loop(fn, systemGE, ...
         'Gamplitude',  Gamplitude, ...
         'waveform',    iWav, ...
         'RFamplitude', RFamplitude, ...
@@ -434,12 +418,6 @@ for ib = 1:length(loopEntries)
         'textra',      textra, ...
         'core', core);
 
-end
-
-if textraWarning
-    fprintf(['\nWarning: requested textra < 0, which means that .seq sequence timing ', ...
-        'is too tight to be directly converted to TOPPE --', ...
-        ' ''textra'' set to zero in one or more scanloop.txt entries.\n']);
 end
 
 % close file
@@ -480,7 +458,7 @@ toppe.writeentryfile('toppeN.entry', ...
 
 % Create 'sequence stamp' file for TOPPE.
 % This file is listed in line 6 of toppe0.entry
-toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', systemGE);
+%toppe.preflightcheck('toppeN.entry', 'seqstamp.txt', systemGE);
 
 % Put TOPPE files in a .tar file (for convenience)
 system(sprintf('tar cf %s toppeN.entry seqstamp.txt modules.txt scanloop.txt', arg.tarFile));

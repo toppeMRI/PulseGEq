@@ -36,12 +36,6 @@ import pulsegeq.*
 % Initialize with defaults
 module          = struct();
 module.duration = block.blockDuration*1e6;
-if ~isempty(nextblock)
-    if pulsegeq.isdelayblock(nextblock)
-        module.duration = module.duration + nextblock.blockDuration*1e6;
-    end
-end
-        
 module.hasRF    = 0;
 module.hasADC   = 0;
 module.fname   = sprintf('module%d.mod', modnum);

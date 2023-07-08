@@ -48,7 +48,7 @@ if ~isempty(block)
     end
 
     % If pure delay block
-    if isdelayblock(block)
+    if pulsegeq.isdelayblock(block)
         minWaitPulseDuration = 4e-6;   % s
         arg.mod = 0;  % tells the interpreter to play wait pulse
         arg.textra = block.blockDuration - minWaitPulseDuration;
